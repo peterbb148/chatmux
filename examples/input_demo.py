@@ -26,7 +26,7 @@ async def mock_send_to_models(text: str, target_models: list[str]) -> None:
     console.print("[dim]Message sent![/dim]\n")
 
 
-def main():
+def main() -> None:
     """Run the input handling demo."""
     console = Console()
 
@@ -65,7 +65,9 @@ def main():
             # Update display
             grid.update_display()
 
-            # Simulate key input (in real app, this would be from keyboard library)
+            # NOTE: This is a simplified demo implementation using input(), which blocks the event loop.
+            # In real usage, you should use a proper keyboard library (e.g., prompt_toolkit, curses, etc.)
+            # to handle non-blocking, event-driven keyboard input.
             key = input("\nEnter key (or 'quit' to exit): ").strip().lower()
 
             if key == "quit":

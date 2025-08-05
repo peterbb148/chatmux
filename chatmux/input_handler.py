@@ -1,7 +1,7 @@
 """Input handler for keyboard events and model coordination."""
 
 import asyncio
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 
 from rich.console import Console
 
@@ -15,7 +15,7 @@ class InputHandler:
     def __init__(
         self,
         grid: GridLayout,
-        send_to_models: Callable[[str, list[str]], asyncio.Task] | None = None,
+        send_to_models: Callable[[str, list[str]], Awaitable[None]] | None = None,
     ):
         """Initialize input handler.
 
