@@ -62,7 +62,11 @@ class ChatmuxApp:
         """Handle shutdown signals."""
         self.running = False
         if self._live:
-            self._live.stop()
+            try:
+                self._live.stop()
+            except (BlockingIOError, BrokenPipeError):
+                # Terminal may be closed
+                pass
         sys.exit(0)
 
     def _setup_model_panes(self) -> None:
@@ -216,7 +220,11 @@ class ChatmuxApp:
 
         finally:
             # Restore terminal settings
-            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+            try:
+                termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+            except (termios.error, OSError):
+                # Terminal may have been closed or changed
+                pass
 
     async def run(self) -> None:
         """Run the main application loop."""
@@ -232,25 +240,33 @@ class ChatmuxApp:
         self.console.print("Use @model to target specific models (e.g., @gpt-4)\n")
 
         # Start live display
-        with Live(
-            self.grid.render(),
-            console=self.console,
-            refresh_per_second=10,
-            transient=False,
-        ) as live:
-            self._live = live
+        try:
+            with Live(
+                self.grid.render(),
+                console=self.console,
+                refresh_per_second=10,
+                transient=False,
+            ) as live:
+                self._live = live
 
-            try:
-                # Process keyboard events
-                await self._process_keyboard_events()
-            except KeyboardInterrupt:
-                pass
-            finally:
-                # Cancel any active tasks
-                await self.coordinator.cancel_all()
-                self._live = None
+                try:
+                    # Process keyboard events
+                    await self._process_keyboard_events()
+                except KeyboardInterrupt:
+                    pass
+                finally:
+                    # Cancel any active tasks
+                    await self.coordinator.cancel_all()
+                    self._live = None
+        except (BlockingIOError, BrokenPipeError):
+            # Handle terminal output issues gracefully
+            pass
 
-        self.console.print("\n[yellow]Goodbye![/yellow]")
+        try:
+            self.console.print("\n[yellow]Goodbye![/yellow]")
+        except (BlockingIOError, BrokenPipeError):
+            # Terminal may have been closed
+            pass
 
 
 async def main() -> None:
