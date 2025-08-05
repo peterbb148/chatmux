@@ -42,7 +42,8 @@ class TestConfig:
     def test_default_values(self, minimal_env):
         """Test configuration with default values."""
         with patch.dict(os.environ, minimal_env, clear=True):
-            config = Config()
+            # Disable .env file loading for this test
+            config = Config(_env_file=None)
 
             # Check defaults
             assert config.openai_api_key is None
@@ -185,7 +186,8 @@ class TestConfig:
 
         # Without API keys
         with patch.dict(os.environ, {}, clear=True):
-            config = Config()
+            # Disable .env file loading for this test
+            config = Config(_env_file=None)
 
             # Should have errors for missing API keys (except Ollama)
             openai_errors = config.validate_provider_config("openai")
