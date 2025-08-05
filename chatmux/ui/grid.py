@@ -98,7 +98,9 @@ class GridLayout:
             Renderable grid layout
         """
         # Create a 2D grid of panes
-        grid: list[list[Panel | None]] = [[None for _ in range(self.cols)] for _ in range(self.rows)]
+        grid: list[list[Panel | None]] = [
+            [None for _ in range(self.cols)] for _ in range(self.rows)
+        ]
 
         # Place panes in grid
         for pane in self.panes:
@@ -112,7 +114,7 @@ class GridLayout:
             border_style="bright_blue",
             expand=True,
         )
-        
+
         # Place input panel at bottom-right if that position is empty
         if self.rows >= 2 and self.cols >= 3:
             if grid[1][2] is None:
@@ -134,21 +136,21 @@ class GridLayout:
         for i, grid_row in enumerate(grid):
             # Create a layout for this row
             row_layout = Layout(name=f"row{i}")
-            
+
             # Split the row into columns
             col_layouts = []
             for j, panel in enumerate(grid_row):
                 if panel is not None:
                     col_layout = Layout(panel, name=f"col{i}_{j}")
                     col_layouts.append(col_layout)
-            
+
             if col_layouts:
                 row_layout.split_row(*col_layouts)
             rows.append(row_layout)
 
         # Create the final layout
         layout = Layout()
-        
+
         if len(rows) == 1:
             layout.update(rows[0])
         else:
