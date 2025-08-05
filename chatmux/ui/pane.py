@@ -1,11 +1,14 @@
 """Model pane component for displaying AI model responses."""
 
 from enum import Enum
+from uuid import uuid4
 
 from rich.console import RenderableType
 from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.style import Style
+
+from ..core.models import ModelProvider
 
 
 class PaneStatus(Enum):
@@ -15,6 +18,9 @@ class PaneStatus(Enum):
     STREAMING = "streaming"
     ERROR = "error"
     DISABLED = "disabled"
+    COMPLETE = "complete"
+    RATE_LIMITED = "rate_limited"
+    CANCELLED = "cancelled"
 
 
 class ModelPane:
@@ -24,6 +30,7 @@ class ModelPane:
         self,
         model_name: str,
         position: tuple[int, int],
+        provider: ModelProvider | None = None,
         width: int | None = None,
         height: int | None = None,
     ):
@@ -32,9 +39,11 @@ class ModelPane:
         Args:
             model_name: Name of the model (e.g., "GPT-4", "Claude 3")
             position: Grid position as (row, col)
+            provider: Model provider (optional, will be inferred from model_name)
             width: Optional fixed width
             height: Optional fixed height
         """
+        self.pane_id = str(uuid4())
         self.model_name = model_name
         self.position = position
         self.width = width
@@ -43,6 +52,12 @@ class ModelPane:
         self.content: str = ""
         self.is_focused = False
         self.error_message: str | None = None
+
+        # Infer provider from model name if not provided
+        if provider:
+            self.provider = provider
+        else:
+            self.provider = self._infer_provider(model_name)
 
     def set_content(self, content: str) -> None:
         """Set the pane's content."""
@@ -103,6 +118,9 @@ class ModelPane:
             PaneStatus.STREAMING: Style(color="yellow"),
             PaneStatus.ERROR: Style(color="red"),
             PaneStatus.DISABLED: Style(color="white", dim=True),
+            PaneStatus.COMPLETE: Style(color="bright_green"),
+            PaneStatus.RATE_LIMITED: Style(color="orange3"),
+            PaneStatus.CANCELLED: Style(color="magenta"),
         }
         return style_map.get(self.status, Style())
 
@@ -113,6 +131,9 @@ class ModelPane:
             PaneStatus.STREAMING: "◉",
             PaneStatus.ERROR: "✗",
             PaneStatus.DISABLED: "○",
+            PaneStatus.COMPLETE: "✓",
+            PaneStatus.RATE_LIMITED: "⏳",
+            PaneStatus.CANCELLED: "⊗",
         }
         symbol = status_symbols.get(self.status, "")
         return f"[bold]{self.model_name}[/bold] {symbol}"
@@ -140,3 +161,35 @@ class ModelPane:
         if self.status == PaneStatus.ERROR and self.error_message:
             return f"Error: {self.error_message}"
         return self.content
+
+    def set_status(self, status: PaneStatus) -> None:
+        """Set the pane status."""
+        self.status = status
+
+    def clear_content(self) -> None:
+        """Clear the pane content (alias for clear)."""
+        self.clear()
+
+    def _infer_provider(self, model_name: str) -> ModelProvider:
+        """Infer provider from model name.
+
+        Args:
+            model_name: The model name
+
+        Returns:
+            Inferred provider
+        """
+        model_lower = model_name.lower()
+        if "gpt" in model_lower or "openai" in model_lower:
+            return ModelProvider.OPENAI
+        elif "claude" in model_lower or "anthropic" in model_lower:
+            return ModelProvider.ANTHROPIC
+        elif "gemini" in model_lower or "google" in model_lower:
+            return ModelProvider.GEMINI
+        elif "mistral" in model_lower:
+            return ModelProvider.MISTRAL
+        elif "llama" in model_lower or "ollama" in model_lower:
+            return ModelProvider.OLLAMA
+        else:
+            # Default to OpenAI if can't infer
+            return ModelProvider.OPENAI
