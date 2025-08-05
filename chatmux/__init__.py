@@ -5,5 +5,6 @@ __author__ = "Peter BB"
 __email__ = "peterbb148@github.com"
 
 from .config import config
+from .input_handler import InputHandler
 
-__all__ = ["config"]
+__all__ = ["config", "InputHandler"]

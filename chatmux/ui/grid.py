@@ -6,18 +6,20 @@ from rich.live import Live
 from rich.panel import Panel
 from rich.style import Style
 
+from .input_pane import InputPane
 from .pane import ModelPane
 
 
 class GridLayout:
     """Manages the 2x3 grid layout of model panes."""
 
-    def __init__(self, rows: int = 2, cols: int = 3):
+    def __init__(self, rows: int = 2, cols: int = 3, input_pane: InputPane | None = None):
         """Initialize grid layout.
 
         Args:
             rows: Number of rows in grid
             cols: Number of columns in grid
+            input_pane: Optional input pane to display at position (1, 2)
         """
         self.rows = rows
         self.cols = cols
@@ -25,6 +27,7 @@ class GridLayout:
         self.focused_index: int = 0
         self.console = Console()
         self._live: Live | None = None
+        self.input_pane = input_pane
 
     def add_pane(self, model_name: str, position: tuple[int, int]) -> ModelPane:
         """Add a model pane to the grid.
@@ -42,6 +45,10 @@ class GridLayout:
         row, col = position
         if row >= self.rows or col >= self.cols:
             raise ValueError(f"Invalid position {position} for {self.rows}x{self.cols} grid")
+
+        # Check if position is reserved for input pane
+        if self.input_pane and position == (1, 2):
+            raise ValueError("Position (1, 2) is reserved for input pane")
 
         # Check if position is already occupied
         for pane in self.panes:
@@ -107,16 +114,18 @@ class GridLayout:
             row, col = pane.position
             grid[row][col] = pane.render()
 
-        # Create input panel for bottom-right position (1,2)
-        input_panel = Panel(
-            "[dim]Type your message here... (Press Tab to switch panes)[/dim]",
-            title="[bold]Input[/bold]",
-            border_style="bright_blue",
-            expand=True,
-        )
-
-        # Place input panel at bottom-right if that position is empty
-        if self.rows >= 2 and self.cols >= 3:
+        # Place input pane at bottom-right position (1,2) if provided
+        if self.input_pane and self.rows >= 2 and self.cols >= 3:
+            if grid[1][2] is None:
+                grid[1][2] = self.input_pane.render()
+        elif not self.input_pane and self.rows >= 2 and self.cols >= 3:
+            # Create default input panel if no input pane provided
+            input_panel = Panel(
+                "[dim]Type your message here... (Press Tab to switch panes)[/dim]",
+                title="[bold]Input[/bold]",
+                border_style="bright_blue",
+                expand=True,
+            )
             if grid[1][2] is None:
                 grid[1][2] = input_panel
 
