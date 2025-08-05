@@ -189,4 +189,7 @@ class Config(BaseSettings):
 
 
 # Global config instance
+# Note: mypy doesn't understand that pydantic-settings fields with defaults
+# are optional. This is a known limitation. See:
+# https://github.com/pydantic/pydantic-settings/issues/146
 config = Config()  # type: ignore[call-arg]
