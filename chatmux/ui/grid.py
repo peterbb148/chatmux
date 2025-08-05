@@ -146,15 +146,15 @@ class GridLayout:
             # Create a layout for this row
             row_layout = Layout(name=f"row{i}")
 
-            # Split the row into columns
+            # Split the row into columns - include ALL panels, even None ones
             col_layouts = []
             for j, panel in enumerate(grid_row):
-                if panel is not None:
-                    col_layout = Layout(panel, name=f"col{i}_{j}")
-                    col_layouts.append(col_layout)
+                # Always create a layout for each column position
+                col_layout = Layout(panel, name=f"col{i}_{j}")
+                col_layouts.append(col_layout)
 
-            if col_layouts:
-                row_layout.split_row(*col_layouts)
+            # Always split the row, even if some panels are None/empty
+            row_layout.split_row(*col_layouts)
             rows.append(row_layout)
 
         # Create the final layout
