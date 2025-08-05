@@ -1,6 +1,5 @@
 """Grid layout manager for the terminal UI."""
 
-from rich.columns import Columns
 from rich.console import Console, RenderableType
 from rich.layout import Layout
 from rich.live import Live
@@ -131,12 +130,21 @@ class GridLayout:
                     )
 
         # Create rows of columns
-        rows: list[Columns] = []
-        for grid_row in grid:
-            # Use Columns to create horizontal layout
-            # Filter out None values for type safety
-            panels = [p for p in grid_row if p is not None]
-            rows.append(Columns(panels, equal=True, expand=True))
+        rows: list[Layout] = []
+        for i, grid_row in enumerate(grid):
+            # Create a layout for this row
+            row_layout = Layout(name=f"row{i}")
+            
+            # Split the row into columns
+            col_layouts = []
+            for j, panel in enumerate(grid_row):
+                if panel is not None:
+                    col_layout = Layout(panel, name=f"col{i}_{j}")
+                    col_layouts.append(col_layout)
+            
+            if col_layouts:
+                row_layout.split_row(*col_layouts)
+            rows.append(row_layout)
 
         # Create the final layout
         layout = Layout()
@@ -144,8 +152,8 @@ class GridLayout:
         if len(rows) == 1:
             layout.update(rows[0])
         else:
-            # Split into rows vertically
-            layout.split_column(*[Layout(row) for row in rows])
+            # Split into rows vertically with equal height
+            layout.split_column(*rows)
 
         return layout
 
