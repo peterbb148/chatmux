@@ -1,0 +1,35 @@
+name: Claude Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  claude-code-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Claude Code Review
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          model: claude-3-5-sonnet-20241022
+          max-comments: 10
+          review-type: comprehensive
+          include-file-patterns: |
+            **/*.py
+            **/*.yml
+            **/*.yaml
+            **/*.toml
+          exclude-file-patterns: |
+            **/__pycache__/**
+            **/venv/**
+            **/.venv/**

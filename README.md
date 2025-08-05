@@ -1,5 +1,11 @@
 # Chatmux
 
+[![CI](https://github.com/peterbb148/chatmux/actions/workflows/ci.yml/badge.svg)](https://github.com/peterbb148/chatmux/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/peterbb148/chatmux/branch/main/graph/badge.svg)](https://codecov.io/gh/peterbb148/chatmux)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+
 A terminal-based multi-LLM chat interface that allows you to send prompts to multiple AI models simultaneously and compare their responses side-by-side in a tmux-inspired grid layout.
 
 ## Overview
