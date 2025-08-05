@@ -65,9 +65,10 @@ def main() -> None:
             # Update display
             grid.update_display()
 
-            # NOTE: This is a simplified demo implementation using input(), which blocks the event loop.
-            # In real usage, you should use a proper keyboard library (e.g., prompt_toolkit, curses, etc.)
-            # to handle non-blocking, event-driven keyboard input.
+            # NOTE: This is a simplified demo implementation using input(),
+            # which blocks the event loop. In real usage, you should use a proper
+            # keyboard library (e.g., prompt_toolkit, curses) to handle
+            # non-blocking, event-driven keyboard input.
             key = input("\nEnter key (or 'quit' to exit): ").strip().lower()
 
             if key == "quit":
