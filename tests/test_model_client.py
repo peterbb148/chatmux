@@ -14,7 +14,7 @@ class MockModelClient(ModelClient):
         yield "test"
         
     async def send_message(self, messages):
-        return "test response", TokenUsage(prompt=10, completion=5, total_cost=0.0015)
+        return "test response", TokenUsage(prompt_tokens=10, completion_tokens=5, total_tokens=15, estimated_cost=0.0015)
 
 
 @pytest.fixture
@@ -22,7 +22,7 @@ def config():
     """Create test model config."""
     return ModelConfig(
         provider=ModelProvider.OPENAI,
-        model="test-model",
+        model_name="test-model",
         api_key="test-key",
         temperature=0.7,
         max_tokens=100,
@@ -58,6 +58,7 @@ async def test_send_message(config, messages):
     client = MockModelClient(config)
     response, usage = await client.send_message(messages)
     assert response == "test response"
-    assert usage.prompt == 10
-    assert usage.completion == 5
-    assert usage.total_cost == 0.0015
+    assert usage.prompt_tokens == 10
+    assert usage.completion_tokens == 5
+    assert usage.total_tokens == 15
+    assert usage.estimated_cost == 0.0015
