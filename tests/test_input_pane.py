@@ -2,8 +2,6 @@
 
 from unittest.mock import Mock
 
-import pytest
-
 from chatmux.ui.input_pane import InputPane, InputState
 
 
