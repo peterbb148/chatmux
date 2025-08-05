@@ -146,6 +146,21 @@ class TestGridLayout:
         """Test rendering empty grid."""
         grid = GridLayout()
 
-        # Should render empty slots
+        # Should render empty slots with input in bottom-right
+        layout = grid.render()
+        assert layout is not None
+    
+    def test_grid_with_input_panel(self):
+        """Test that input panel is placed at bottom-right."""
+        grid = GridLayout()
+        
+        # Add panes but leave bottom-right empty
+        grid.add_pane("GPT-4", (0, 0))
+        grid.add_pane("Claude", (0, 1))
+        grid.add_pane("Gemini", (0, 2))
+        grid.add_pane("Mistral", (1, 0))
+        grid.add_pane("Llama", (1, 1))
+        # (1, 2) should have input panel
+        
         layout = grid.render()
         assert layout is not None

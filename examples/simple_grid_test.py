@@ -15,7 +15,7 @@ def test_grid():
     """Test basic grid layout."""
     console = Console()
 
-    # Create a 2x3 grid of panels
+    # Create a true 2x3 grid of panels with input as part of the grid
     row1 = Columns(
         [
             Panel("GPT-4", expand=True),
@@ -30,7 +30,7 @@ def test_grid():
         [
             Panel("Mistral", expand=True),
             Panel("Llama 3", expand=True),
-            Panel("GPT-3.5", expand=True),
+            Panel("Input", expand=True, border_style="bright_blue"),
         ],
         equal=True,
         expand=True,
@@ -41,7 +41,6 @@ def test_grid():
     layout.split_column(
         Layout(row1, name="row1"),
         Layout(row2, name="row2"),
-        Layout(Panel("Input area"), name="input", size=3),
     )
 
     console.print(layout, height=20)

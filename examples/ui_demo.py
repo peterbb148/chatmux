@@ -15,14 +15,14 @@ def main():
     # Create grid layout
     grid = GridLayout(rows=2, cols=3)
 
-    # Add model panes
+    # Add model panes (5 models, leaving bottom-right for input)
     models = [
         ("GPT-4", (0, 0)),
         ("Claude 3", (0, 1)),
         ("Gemini Pro", (0, 2)),
         ("Mistral", (1, 0)),
         ("Llama 3", (1, 1)),
-        ("GPT-3.5", (1, 2)),
+        # Position (1, 2) is reserved for input pane
     ]
 
     panes = []

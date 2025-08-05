@@ -106,7 +106,20 @@ class GridLayout:
             row, col = pane.position
             grid[row][col] = pane.render()
 
-        # Fill empty positions with placeholder panels
+        # Create input panel for bottom-right position (1,2)
+        input_panel = Panel(
+            "[dim]Type your message here... (Press Tab to switch panes)[/dim]",
+            title="[bold]Input[/bold]",
+            border_style="bright_blue",
+            expand=True,
+        )
+        
+        # Place input panel at bottom-right if that position is empty
+        if self.rows >= 2 and self.cols >= 3:
+            if grid[1][2] is None:
+                grid[1][2] = input_panel
+
+        # Fill remaining empty positions with placeholder panels
         for row in range(self.rows):
             for col in range(self.cols):
                 if grid[row][col] is None:
@@ -127,29 +140,12 @@ class GridLayout:
 
         # Create the final layout
         layout = Layout()
-
-        # Add input area at the bottom
-        layout.split_column(
-            Layout(name="grid", ratio=5),
-            Layout(name="input", size=3),
-        )
-
-        # Add rows to grid
-        grid_layout = layout["grid"]
+        
         if len(rows) == 1:
-            grid_layout.update(rows[0])
+            layout.update(rows[0])
         else:
             # Split into rows vertically
-            grid_layout.split_column(*[Layout(row) for row in rows])
-
-        # Add input panel
-        layout["input"].update(
-            Panel(
-                "[dim]Type your message here... (Press Tab to switch panes)[/dim]",
-                title="Input",
-                border_style="bright_blue",
-            )
-        )
+            layout.split_column(*[Layout(row) for row in rows])
 
         return layout
 
