@@ -50,7 +50,7 @@ class ChatmuxApp:
         self.coordinator = ResponseCoordinator(on_stream_update=self._handle_stream_update)
         self.conversation_history: list[Message] = []
         self.running = False
-        self._live: Live | None = None
+        self._last_render_time = 0.0
         self._setup_signal_handlers()
 
     def _setup_signal_handlers(self) -> None:
@@ -61,12 +61,6 @@ class ChatmuxApp:
     def _signal_handler(self, signum: int, frame: Any) -> None:
         """Handle shutdown signals."""
         self.running = False
-        if self._live:
-            try:
-                self._live.stop()
-            except (BlockingIOError, BrokenPipeError):
-                # Terminal may be closed
-                pass
         sys.exit(0)
 
     def _setup_model_panes(self) -> None:
@@ -102,6 +96,42 @@ class ChatmuxApp:
         # The grid automatically updates when pane content changes
         # This callback is for future enhancements like logging
         pass
+
+    def _translate_char_to_key(self, char: str) -> str:
+        """Translate raw character to key name expected by input handler."""
+        if char == "\r" or char == "\n":
+            return "enter"
+        elif char == "\x08" or char == "\x7f":  # Backspace or DEL
+            return "backspace"
+        elif char == "\t":
+            return "tab"
+        elif ord(char) == 21:  # Ctrl+U
+            return "ctrl+u"
+        elif len(char) == 1 and char.isprintable():
+            return char
+        else:
+            # For other special characters, just return as-is
+            return char
+
+    def _update_display_if_needed(self) -> None:
+        """Update display with throttling to avoid overwhelming Warp."""
+        import time
+        current_time = time.time()
+        # Only update if at least 0.5 seconds have passed since last update
+        if current_time - self._last_render_time >= 0.5:
+            try:
+                # Use Rich's built-in screen clearing instead of ANSI codes
+                self.console.clear()
+                # Re-render the welcome message and grid
+                self.console.print("\n[bold cyan]Welcome to Chatmux![/bold cyan]")
+                self.console.print("Press ESC or Ctrl+C to quit")
+                self.console.print("Type your message and press Enter to send to all models")
+                self.console.print("Use @model to target specific models (e.g., @gpt-4)\n")
+                self.console.print(self.grid.render())
+                self._last_render_time = current_time
+            except (BlockingIOError, BrokenPipeError):
+                # Ignore output errors
+                pass
 
     async def _handle_input(self, message: str, target_models: list[str]) -> None:
         """Handle user input and send to models."""
@@ -194,22 +224,30 @@ class ChatmuxApp:
                             self.running = False
                             break
                         else:
-                            # Let input handler process the key
-                            handled = self.input_handler.handle_key(char)
-
-                            # If it was Enter, process the input
-                            if char in ("\r", "\n") and handled:
+                            # Translate raw characters to key names for input handler
+                            key_name = self._translate_char_to_key(char)
+                            
+                            # Special handling for Enter key
+                            if char in ("\r", "\n"):
+                                # Get content BEFORE processing Enter
                                 input_pane = self.input_handler.get_input_pane()
-                                content = input_pane.state.current_text
-                                targets = input_pane._parse_model_targets(content)
-                                if content.strip():
+                                content = input_pane.state.current_text.strip()
+                                
+                                # Process the content
+                                if content:
+                                    targets = input_pane._parse_model_targets(content)
                                     # Schedule coroutine in the event loop
                                     asyncio.create_task(self._handle_input(content, targets))
+                                    # Clear the input pane manually
                                     input_pane.clear()
+                                
+                                handled = True
+                            else:
+                                # For non-Enter keys, use normal input handler processing
+                                handled = self.input_handler.handle_key(key_name)
 
-                        # Update display
-                        if self._live:
-                            self._live.update(self.grid.render())
+                        # Don't update display during typing to avoid corruption
+                        # Input will be processed but not visible until Enter is pressed
 
                 except BlockingIOError:
                     # No input available, sleep briefly
@@ -237,27 +275,22 @@ class ChatmuxApp:
         self.console.print("\n[bold cyan]Welcome to Chatmux![/bold cyan]")
         self.console.print("Press ESC or Ctrl+C to quit")
         self.console.print("Type your message and press Enter to send to all models")
-        self.console.print("Use @model to target specific models (e.g., @gpt-4)\n")
+        self.console.print("Use @model to target specific models (e.g., @gpt-4)")
+        self.console.print("[dim]Note: Typing is captured but not visually displayed (Warp terminal compatibility)[/dim]")
 
-        # Start live display
+        # Use simple display update instead of Live for Warp compatibility
         try:
-            with Live(
-                self.grid.render(),
-                console=self.console,
-                refresh_per_second=10,
-                transient=False,
-            ) as live:
-                self._live = live
-
-                try:
-                    # Process keyboard events
-                    await self._process_keyboard_events()
-                except KeyboardInterrupt:
-                    pass
-                finally:
-                    # Cancel any active tasks
-                    await self.coordinator.cancel_all()
-                    self._live = None
+            # Initial render - print without extra newline
+            self.console.print(self.grid.render(), end="")
+            
+            # Process keyboard events without Live display
+            try:
+                await self._process_keyboard_events()
+            except KeyboardInterrupt:
+                pass
+            finally:
+                # Cancel any active tasks
+                await self.coordinator.cancel_all()
         except (BlockingIOError, BrokenPipeError):
             # Handle terminal output issues gracefully
             pass

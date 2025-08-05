@@ -98,13 +98,22 @@ class GridLayout:
             self.focused_index = index
             self.panes[self.focused_index].set_focused(True)
 
+
     def render(self) -> RenderableType:
         """Render the grid layout.
 
         Returns:
             Renderable grid layout
         """
-        # Create a 2D grid of panes
+        # Always create a fresh layout structure to avoid update issues
+        # This matches the working pattern from our debug test
+        layout = Layout(name="main")
+        
+        # Create 2x3 grid structure
+        top_row = Layout(name="top_row", ratio=1, minimum_size=10)
+        bottom_row = Layout(name="bottom_row", ratio=1, minimum_size=10)
+        
+        # Create a 2D grid of panels
         grid: list[list[Panel | None]] = [
             [None for _ in range(self.cols)] for _ in range(self.rows)
         ]
@@ -140,32 +149,23 @@ class GridLayout:
                         expand=True,
                     )
 
-        # Create rows of columns
-        rows: list[Layout] = []
-        for i, grid_row in enumerate(grid):
-            # Create a layout for this row
-            row_layout = Layout(name=f"row{i}")
-
-            # Split the row into columns - include ALL panels, even None ones
-            col_layouts = []
-            for j, panel in enumerate(grid_row):
-                # Always create a layout for each column position
-                col_layout = Layout(panel, name=f"col{i}_{j}")
-                col_layouts.append(col_layout)
-
-            # Always split the row, even if some panels are None/empty
-            row_layout.split_row(*col_layouts)
-            rows.append(row_layout)
-
-        # Create the final layout
-        layout = Layout()
-
-        if len(rows) == 1:
-            layout.update(rows[0])
-        else:
-            # Split into rows vertically with equal height
-            layout.split_column(*rows)
-
+        # Split top row into 3 columns with the actual panels
+        top_row.split_row(
+            Layout(grid[0][0], name="top_0_0"),
+            Layout(grid[0][1], name="top_0_1"), 
+            Layout(grid[0][2], name="top_0_2")
+        )
+        
+        # Split bottom row into 3 columns with the actual panels
+        bottom_row.split_row(
+            Layout(grid[1][0], name="bottom_1_0"),
+            Layout(grid[1][1], name="bottom_1_1"),
+            Layout(grid[1][2], name="bottom_1_2")
+        )
+        
+        # Combine the rows
+        layout.split_column(top_row, bottom_row)
+        
         return layout
 
     def start_live_display(self) -> None:
@@ -187,8 +187,9 @@ class GridLayout:
 
     def update_display(self) -> None:
         """Update the live display."""
-        if self._live is not None:
-            self._live.update(self.render())
+        # This method is called by input handler but we don't have our own Live display
+        # The app manages the Live display, so this is a no-op
+        pass
 
     def handle_resize(self) -> None:
         """Handle terminal resize event."""
