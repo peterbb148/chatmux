@@ -36,8 +36,17 @@ class ChatmuxApp:
     def __init__(self) -> None:
         """Initialize the Chatmux application."""
         self.console = Console()
-        self.grid = GridLayout(config.grid_rows, config.grid_cols)
-        self.input_handler = InputHandler(self.grid)
+
+        # Create input handler first to get the input pane
+        self.input_handler = InputHandler(None)  # We'll set grid later
+        input_pane = self.input_handler.get_input_pane()
+
+        # Create grid with input pane
+        self.grid = GridLayout(config.grid_rows, config.grid_cols, input_pane)
+
+        # Now set the grid reference in input handler
+        self.input_handler.grid = self.grid
+
         self.coordinator = ResponseCoordinator(on_stream_update=self._handle_stream_update)
         self.conversation_history: list[Message] = []
         self.running = False
@@ -60,54 +69,29 @@ class ChatmuxApp:
         """Set up model panes based on configuration."""
         # OpenAI models
         if config.openai_api_key and config.openai_model_1:
-            pane = ModelPane(
-                config.openai_model_1,
-                (0, 0),
-                provider=ModelProvider.OPENAI,
-            )
-            self.grid.add_pane(config.openai_model_1, (0, 0))
-            self.grid.panes[0] = pane
+            pane = self.grid.add_pane(config.openai_model_1, (0, 0))
+            pane.provider = ModelProvider.OPENAI
 
         if config.openai_api_key and config.openai_model_2:
-            pane = ModelPane(
-                config.openai_model_2,
-                (0, 1),
-                provider=ModelProvider.OPENAI,
-            )
-            self.grid.add_pane(config.openai_model_2, (0, 1))
-            self.grid.panes[1] = pane
+            pane = self.grid.add_pane(config.openai_model_2, (0, 1))
+            pane.provider = ModelProvider.OPENAI
 
         # Anthropic models (placeholder for now)
         if config.anthropic_api_key and config.anthropic_model_1:
-            pane = ModelPane(
-                config.anthropic_model_1,
-                (0, 2),
-                provider=ModelProvider.ANTHROPIC,
-            )
+            pane = self.grid.add_pane(config.anthropic_model_1, (0, 2))
+            pane.provider = ModelProvider.ANTHROPIC
             pane.set_content("Anthropic client not yet implemented")
-            self.grid.add_pane(config.anthropic_model_1, (0, 2))
-            self.grid.panes[2] = pane
 
         # Other providers (placeholders)
         if config.gemini_api_key and config.gemini_model:
-            pane = ModelPane(
-                config.gemini_model,
-                (1, 0),
-                provider=ModelProvider.GEMINI,
-            )
+            pane = self.grid.add_pane(config.gemini_model, (1, 0))
+            pane.provider = ModelProvider.GEMINI
             pane.set_content("Gemini client not yet implemented")
-            self.grid.add_pane(config.gemini_model, (1, 0))
-            self.grid.panes[3] = pane
 
         if config.mistral_api_key and config.mistral_model:
-            pane = ModelPane(
-                config.mistral_model,
-                (1, 1),
-                provider=ModelProvider.MISTRAL,
-            )
+            pane = self.grid.add_pane(config.mistral_model, (1, 1))
+            pane.provider = ModelProvider.MISTRAL
             pane.set_content("Mistral client not yet implemented")
-            self.grid.add_pane(config.mistral_model, (1, 1))
-            self.grid.panes[4] = pane
 
     def _handle_stream_update(self, update: StreamUpdate) -> None:
         """Handle streaming updates from the coordinator."""
