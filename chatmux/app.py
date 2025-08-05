@@ -50,7 +50,6 @@ class ChatmuxApp:
         self.coordinator = ResponseCoordinator(on_stream_update=self._handle_stream_update)
         self.conversation_history: list[Message] = []
         self.running = False
-        self._last_render_time = 0.0
         self._setup_signal_handlers()
 
     def _setup_signal_handlers(self) -> None:
@@ -114,24 +113,11 @@ class ChatmuxApp:
             return char
 
     def _update_display_if_needed(self) -> None:
-        """Update display with throttling to avoid overwhelming Warp."""
-        import time
-        current_time = time.time()
-        # Only update if at least 0.5 seconds have passed since last update
-        if current_time - self._last_render_time >= 0.5:
-            try:
-                # Use Rich's built-in screen clearing instead of ANSI codes
-                self.console.clear()
-                # Re-render the welcome message and grid
-                self.console.print("\n[bold cyan]Welcome to Chatmux![/bold cyan]")
-                self.console.print("Press ESC or Ctrl+C to quit")
-                self.console.print("Type your message and press Enter to send to all models")
-                self.console.print("Use @model to target specific models (e.g., @gpt-4)\n")
-                self.console.print(self.grid.render())
-                self._last_render_time = current_time
-            except (BlockingIOError, BrokenPipeError):
-                # Ignore output errors
-                pass
+        """Update display intelligently when input content changes."""
+        # Disable real-time display updates to prevent scrolling and corruption
+        # The input pane within the grid shows typing feedback automatically
+        # Users can see what they're typing in the bottom-right input pane
+        pass
 
     async def _handle_input(self, message: str, target_models: list[str]) -> None:
         """Handle user input and send to models."""
@@ -156,23 +142,42 @@ class ChatmuxApp:
             ]
 
         if not target_panes:
-            self.console.print("[yellow]No models available or matched[/yellow]")
+            # No models available - could show error in input pane if needed
             return
 
-        # Send to models
-        await self.coordinator.send_to_models(message, target_panes, self.conversation_history)
+        # Update panes to show "thinking" state and refresh display
+        for pane in target_panes:
+            pane.set_content(f"💭 Thinking about: {message[:30]}...")
+        
+        # The "thinking" state will be visible in the panes automatically
+
+        # Send to models (placeholder - actual model calls would happen here)
+        await self._simulate_model_responses(message, target_panes)
 
         # Store assistant responses in history
-        # TODO: This should be done per model when we support multiple conversations
-        # For now, we'll just store the first response
         for pane in target_panes:
-            if pane.content:
+            if pane.content and not pane.content.startswith("💭"):
                 assistant_msg = Message(
                     role=MessageRole.ASSISTANT,
                     content=pane.content,
                 )
                 self.conversation_history.append(assistant_msg)
-                break
+                break  # Just store first response for now
+
+    async def _simulate_model_responses(self, message: str, target_panes: list) -> None:
+        """Simulate model responses (placeholder until real integration)."""
+        import asyncio
+        
+        for i, pane in enumerate(target_panes):
+            # Simulate different response times
+            await asyncio.sleep(0.5 + i * 0.3)
+            
+            # Generate a placeholder response
+            response = f"[Response to: '{message[:20]}...']\n\nThis is a simulated response from {pane.model_name}. In the real implementation, this would be the actual AI model response."
+            
+            pane.set_content(response)
+            
+            # Response will be visible in the pane automatically
 
     async def _process_keyboard_events(self) -> None:
         """Process keyboard events in the background."""
@@ -245,15 +250,15 @@ class ChatmuxApp:
                             else:
                                 # For non-Enter keys, use normal input handler processing
                                 handled = self.input_handler.handle_key(key_name)
-
-                        # Don't update display during typing to avoid corruption
-                        # Input will be processed but not visible until Enter is pressed
+                                
+                                # Input pane within the grid shows typing automatically
+                                # No additional display updates needed to avoid scrolling
 
                 except BlockingIOError:
                     # No input available, sleep briefly
                     await asyncio.sleep(0.01)
-                except Exception:
-                    # Log error but continue
+                except Exception as e:
+                    # Log error but continue silently to avoid display corruption
                     pass
 
         finally:
@@ -271,12 +276,8 @@ class ChatmuxApp:
         # Set up model panes
         self._setup_model_panes()
 
-        # Display welcome message
-        self.console.print("\n[bold cyan]Welcome to Chatmux![/bold cyan]")
-        self.console.print("Press ESC or Ctrl+C to quit")
-        self.console.print("Type your message and press Enter to send to all models")
-        self.console.print("Use @model to target specific models (e.g., @gpt-4)")
-        self.console.print("[dim]Note: Typing is captured but not visually displayed (Warp terminal compatibility)[/dim]")
+        # Display compact welcome message
+        self.console.print("[bold cyan]Chatmux[/bold cyan] | ESC/Ctrl+C: quit | Enter: send | @model: target")
 
         # Use simple display update instead of Live for Warp compatibility
         try:

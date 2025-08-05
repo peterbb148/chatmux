@@ -2,11 +2,13 @@
 
 import argparse
 import asyncio
+import os
 import sys
 from pathlib import Path
 
 from . import __version__
 from .app import main as app_main
+from .textual_app import main as textual_main
 from .config import config
 
 
@@ -50,6 +52,18 @@ Examples:
         choices=["debug", "info", "warning", "error"],
         default=config.log_level.lower(),
         help="set logging level (default: %(default)s)",
+    )
+
+    parser.add_argument(
+        "--textual",
+        action="store_true",
+        help="use Textual-based UI (recommended for better terminal compatibility)",
+    )
+
+    parser.add_argument(
+        "--legacy",
+        action="store_true",
+        help="use legacy Rich-based UI (deprecated, has terminal issues)",
     )
 
     return parser.parse_args()
@@ -137,7 +151,26 @@ def main() -> None:
 
     # Run the application
     try:
-        asyncio.run(app_main())
+        # Determine which UI to use
+        # Default to Textual unless --legacy is specified
+        use_textual = not args.legacy
+        
+        # Override with --textual if specified
+        if args.textual:
+            use_textual = True
+            
+        # Environment variable can also control this
+        if os.environ.get("CHATMUX_USE_LEGACY", "").lower() == "true":
+            use_textual = False
+            
+        if use_textual:
+            # Run Textual version (synchronous)
+            textual_main()
+        else:
+            # Run legacy Rich version (async)
+            print("Warning: Using legacy UI which has known terminal compatibility issues.")
+            print("Consider using the default Textual UI for better experience.\n")
+            asyncio.run(app_main())
     except KeyboardInterrupt:
         print("\nInterrupted")
         sys.exit(0)

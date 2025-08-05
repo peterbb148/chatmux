@@ -109,9 +109,9 @@ class GridLayout:
         # This matches the working pattern from our debug test
         layout = Layout(name="main")
         
-        # Create 2x3 grid structure
-        top_row = Layout(name="top_row", ratio=1, minimum_size=10)
-        bottom_row = Layout(name="bottom_row", ratio=1, minimum_size=10)
+        # Create 2x3 grid structure with smaller minimum sizes
+        top_row = Layout(name="top_row", ratio=1, minimum_size=8)
+        bottom_row = Layout(name="bottom_row", ratio=1, minimum_size=8)
         
         # Create a 2D grid of panels
         grid: list[list[Panel | None]] = [
