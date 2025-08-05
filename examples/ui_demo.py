@@ -53,10 +53,7 @@ def main():
             grid.update_display()
 
         code = (
-            "\n\nHere's some code:\n\n```python\n"
-            "def hello():\n"
-            "    print('Hello from Claude!')\n"
-            "```"
+            "\n\nHere's some code:\n\n```python\ndef hello():\n    print('Hello from Claude!')\n```"
         )
         panes[1].append_content(code)
         panes[1].status = PaneStatus.IDLE
