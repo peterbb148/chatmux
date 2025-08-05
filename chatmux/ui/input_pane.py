@@ -90,9 +90,7 @@ class InputPane:
         # Move to previous item
         if self.state.history_index < len(self.state.history) - 1:
             self.state.history_index += 1
-            self.state.current_text = self.state.history[
-                -(self.state.history_index + 1)
-            ]
+            self.state.current_text = self.state.history[-(self.state.history_index + 1)]
             self.state.cursor_position = len(self.state.current_text)
 
     def history_next(self) -> None:
@@ -104,9 +102,7 @@ class InputPane:
                 # Restore temp text
                 self.state.current_text = self.state.temp_text
             else:
-                self.state.current_text = self.state.history[
-                    -(self.state.history_index + 1)
-                ]
+                self.state.current_text = self.state.history[-(self.state.history_index + 1)]
 
             self.state.cursor_position = len(self.state.current_text)
 
@@ -179,9 +175,7 @@ class InputPane:
                     )
                     # Add remaining text
                     if self.state.cursor_position + 1 < len(self.state.current_text):
-                        text.append(
-                            self.state.current_text[self.state.cursor_position + 1 :]
-                        )
+                        text.append(self.state.current_text[self.state.cursor_position + 1 :])
                 else:
                     # Cursor at end
                     text.append("█", style="reverse")
