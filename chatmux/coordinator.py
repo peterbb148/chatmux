@@ -53,9 +53,7 @@ class ResponseCoordinator:
         self.active_tasks: dict[UUID, ResponseTask] = {}
         self._client_cache: dict[tuple[ModelProvider, str], ModelClient] = {}
 
-    def _get_or_create_client(
-        self, provider: ModelProvider, model_name: str
-    ) -> ModelClient:
+    def _get_or_create_client(self, provider: ModelProvider, model_name: str) -> ModelClient:
         """Get or create a model client.
 
         Args:
@@ -81,7 +79,9 @@ class ResponseCoordinator:
             pane_num = ""
 
         model_config_dict = config.get_model_config(provider.value, pane_num)
-        model_config = ModelConfig(**model_config_dict)
+        # Convert provider string back to enum
+        model_config_dict["provider"] = provider
+        model_config = ModelConfig(**model_config_dict)  # type: ignore[arg-type]
 
         # Create client based on provider
         if provider == ModelProvider.OPENAI:
@@ -158,9 +158,7 @@ class ResponseCoordinator:
 
         return tasks
 
-    async def _handle_model_response(
-        self, task: ResponseTask, messages: list[Message]
-    ) -> None:
+    async def _handle_model_response(self, task: ResponseTask, messages: list[Message]) -> None:
         """Handle response from a single model.
 
         Args:
@@ -170,7 +168,7 @@ class ResponseCoordinator:
         try:
             # Try streaming first
             full_response = ""
-            async for chunk in task.client.stream_response(messages):
+            async for chunk in task.client.stream_response(messages):  # type: ignore[attr-defined]
                 full_response += chunk
                 task.pane.append_content(chunk)
 
@@ -284,9 +282,7 @@ class ResponseCoordinator:
                 response_task.pane.set_status(PaneStatus.CANCELLED)
 
         # Wait for all tasks to complete
-        await asyncio.gather(
-            *[t.task for t in tasks if t.task], return_exceptions=True
-        )
+        await asyncio.gather(*[t.task for t in tasks if t.task], return_exceptions=True)
 
         self.active_tasks.clear()
 

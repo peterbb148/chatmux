@@ -60,11 +60,7 @@ class TestResponseCoordinator:
             mock_client.stream_response = Mock(return_value=self._async_generator(["Test"]))
             mock_get_client.return_value = mock_client
 
-            tasks = await coordinator.send_to_models(
-                "Hello",
-                [mock_pane],
-                []
-            )
+            tasks = await coordinator.send_to_models("Hello", [mock_pane], [])
 
             assert len(tasks) == 1
             assert mock_pane.pane_id in tasks
@@ -112,9 +108,7 @@ class TestResponseCoordinator:
             # Create mock client with streaming
             mock_client = Mock()
             chunks = ["Hello", " ", "world", "!"]
-            mock_client.stream_response = Mock(
-                return_value=self._async_generator(chunks)
-            )
+            mock_client.stream_response = Mock(return_value=self._async_generator(chunks))
             mock_get_client.return_value = mock_client
 
             await coordinator.send_to_models("Test", [mock_pane])
@@ -141,9 +135,7 @@ class TestResponseCoordinator:
 
         with patch.object(coordinator, "_get_or_create_client") as mock_get_client:
             mock_client = Mock()
-            mock_client.stream_response = Mock(
-                side_effect=Exception("Test error")
-            )
+            mock_client.stream_response = Mock(side_effect=Exception("Test error"))
             mock_get_client.return_value = mock_client
 
             await coordinator.send_to_models("Test", [mock_pane])
@@ -170,9 +162,7 @@ class TestResponseCoordinator:
         """Test rate limit error handling."""
         with patch.object(coordinator, "_get_or_create_client") as mock_get_client:
             mock_client = Mock()
-            mock_client.stream_response = Mock(
-                side_effect=RateLimitError("Rate limited")
-            )
+            mock_client.stream_response = Mock(side_effect=RateLimitError("Rate limited"))
             mock_get_client.return_value = mock_client
 
             await coordinator.send_to_models("Test", [mock_pane])
@@ -211,6 +201,7 @@ class TestResponseCoordinator:
 
         # Add mock task
         from chatmux.coordinator import ResponseTask
+
         task = ResponseTask(
             pane=Mock(),
             client=Mock(),
@@ -226,16 +217,12 @@ class TestResponseCoordinator:
             mock_client_class.return_value = mock_instance
 
             # First call should create client
-            client1 = coordinator._get_or_create_client(
-                ModelProvider.OPENAI, "gpt-4"
-            )
+            client1 = coordinator._get_or_create_client(ModelProvider.OPENAI, "gpt-4")
             assert mock_client_class.called
 
             # Second call should return cached client
             mock_client_class.reset_mock()
-            client2 = coordinator._get_or_create_client(
-                ModelProvider.OPENAI, "gpt-4"
-            )
+            client2 = coordinator._get_or_create_client(ModelProvider.OPENAI, "gpt-4")
             assert not mock_client_class.called
             assert client1 is client2
 

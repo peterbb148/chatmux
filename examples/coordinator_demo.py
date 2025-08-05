@@ -95,7 +95,7 @@ async def demo_coordinator() -> None:
                 await asyncio.sleep(2)  # Pause between prompts
                 console.print("\n" + "-" * 50 + "\n")
 
-            console.print(f"[yellow]Prompt {i+1}:[/yellow] {prompt}")
+            console.print(f"[yellow]Prompt {i + 1}:[/yellow] {prompt}")
 
             # Send to available models (only OpenAI for now)
             available_panes = [p for p in panes if p.provider == ModelProvider.OPENAI]
