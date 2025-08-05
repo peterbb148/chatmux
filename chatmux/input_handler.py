@@ -14,7 +14,7 @@ class InputHandler:
 
     def __init__(
         self,
-        grid: GridLayout,
+        grid: GridLayout | None,
         send_to_models: Callable[[str, list[str]], Awaitable[None]] | None = None,
     ):
         """Initialize input handler.
@@ -79,7 +79,8 @@ class InputHandler:
         """Toggle focus between input and grid."""
         self.input_has_focus = not self.input_has_focus
         self.input_pane.set_focused(self.input_has_focus)
-        self.grid.update_display()
+        if self.grid:
+            self.grid.update_display()
 
     def _handle_input_key(self, key: str) -> bool:
         """Handle key when input pane has focus.
@@ -140,6 +141,9 @@ class InputHandler:
         Returns:
             True if handled
         """
+        if not self.grid:
+            return False
+
         if key in ["left", "h"]:
             self.grid.focus_previous()
             return True

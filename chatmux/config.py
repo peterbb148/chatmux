@@ -188,6 +188,18 @@ class Config(BaseSettings):
 
         return errors
 
+    @property
+    def grid_rows(self) -> int:
+        """Get number of grid rows."""
+        rows, _ = self.grid_layout.split("x")
+        return int(rows)
+
+    @property
+    def grid_cols(self) -> int:
+        """Get number of grid columns."""
+        _, cols = self.grid_layout.split("x")
+        return int(cols)
+
 
 # Global config instance
 # Note: mypy doesn't understand that pydantic-settings fields with defaults
