@@ -105,7 +105,7 @@ async def demo_coordinator() -> None:
                 pane.clear_content()
 
             # Send prompt
-            tasks = await coordinator.send_to_models(prompt, available_panes)
+            await coordinator.send_to_models(prompt, available_panes)
 
             # Update display while streaming
             while coordinator.get_active_count() > 0:

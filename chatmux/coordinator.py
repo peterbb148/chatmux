@@ -7,7 +7,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 from .config import config
-from .core.models import Message, MessageRole, ModelProvider, TokenUsage
+from .core.models import Message, MessageRole, ModelConfig, ModelProvider, TokenUsage
 from .models import ModelClient, RateLimitError
 from .models.openai_client import OpenAIClient
 from .ui.pane import ModelPane, PaneStatus
@@ -80,7 +80,8 @@ class ResponseCoordinator:
         else:
             pane_num = ""
 
-        model_config = config.get_model_config(provider.value, pane_num)
+        model_config_dict = config.get_model_config(provider.value, pane_num)
+        model_config = ModelConfig(**model_config_dict)
 
         # Create client based on provider
         if provider == ModelProvider.OPENAI:
