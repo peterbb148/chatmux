@@ -140,6 +140,7 @@ class Config(BaseSettings):
         model_name = getattr(self, model_field, None)
 
         config = {
+            "provider": provider,
             "api_key": api_key,
             "model_name": model_name,
             "temperature": self.default_temperature,

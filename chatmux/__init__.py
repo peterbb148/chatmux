@@ -5,6 +5,7 @@ __author__ = "Peter BB"
 __email__ = "peterbb148@github.com"
 
 from .config import config
+from .coordinator import ResponseCoordinator
 from .input_handler import InputHandler
 
-__all__ = ["config", "InputHandler"]
+__all__ = ["config", "InputHandler", "ResponseCoordinator"]
