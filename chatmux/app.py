@@ -9,12 +9,25 @@ from typing import Any
 from rich.console import Console
 from rich.live import Live
 
-from .config import config
-from .coordinator import ResponseCoordinator, StreamUpdate
-from .core.models import Message, MessageRole, ModelProvider
-from .input_handler import InputHandler
-from .ui.grid import GridLayout
-from .ui.pane import ModelPane
+# Handle both direct execution and module import
+try:
+    from .config import config
+    from .coordinator import ResponseCoordinator, StreamUpdate
+    from .core.models import Message, MessageRole, ModelProvider
+    from .input_handler import InputHandler
+    from .ui.grid import GridLayout
+    from .ui.pane import ModelPane
+except ImportError:
+    # Direct execution - add parent directory to path
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+
+    from chatmux.config import config
+    from chatmux.coordinator import ResponseCoordinator, StreamUpdate
+    from chatmux.core.models import Message, MessageRole, ModelProvider
+    from chatmux.input_handler import InputHandler
+    from chatmux.ui.grid import GridLayout
+    from chatmux.ui.pane import ModelPane
 
 
 class ChatmuxApp:
@@ -149,8 +162,25 @@ class ChatmuxApp:
         import termios
         import tty
 
+        # Check if stdin is a terminal
+        if not sys.stdin.isatty():
+            self.console.print(
+                "[yellow]Not running in a terminal, keyboard input disabled[/yellow]"
+            )
+            # Just wait until running is False
+            while self.running:
+                await asyncio.sleep(0.1)
+            return
+
         # Save terminal settings
-        old_settings = termios.tcgetattr(sys.stdin)
+        try:
+            old_settings = termios.tcgetattr(sys.stdin)
+        except termios.error as e:
+            self.console.print(f"[red]Terminal setup error: {e}[/red]")
+            # Fall back to simple input mode
+            while self.running:
+                await asyncio.sleep(0.1)
+            return
 
         try:
             # Set terminal to raw mode
