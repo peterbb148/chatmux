@@ -23,11 +23,12 @@ export class WebSocketService {
   private connectionHandlers: ((connected: boolean) => void)[] = []
 
   connect(url: string) {
+    console.log('Attempting to connect to WebSocket:', url)
     try {
       this.ws = new WebSocket(url)
 
       this.ws.onopen = () => {
-        console.log('WebSocket connected')
+        console.log('WebSocket connected successfully')
         if (this.reconnectTimeout) {
           clearTimeout(this.reconnectTimeout)
           this.reconnectTimeout = null
@@ -38,6 +39,7 @@ export class WebSocketService {
       this.ws.onmessage = (event) => {
         try {
           const message: WebSocketMessage = JSON.parse(event.data)
+          console.log('WebSocket message received:', message)
           this.notifyMessageHandlers(message)
         } catch (error) {
           console.error('Failed to parse WebSocket message:', error)
@@ -52,6 +54,7 @@ export class WebSocketService {
 
       this.ws.onerror = (error) => {
         console.error('WebSocket error:', error)
+        console.error('WebSocket URL was:', url)
       }
     } catch (error) {
       console.error('Failed to connect to WebSocket:', error)

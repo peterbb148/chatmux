@@ -1,8 +1,10 @@
 import asyncio
 import json
 import logging
+import os
 from datetime import datetime
 
+from dotenv import load_dotenv
 from fastapi import WebSocket
 
 from app.models.message import Message, StreamingResponse
@@ -13,25 +15,62 @@ from app.services.llm_providers import (
     OpenAIProvider,
 )
 
+# Load environment variables from parent directory
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "../../../.env"))
+
 logger = logging.getLogger(__name__)
 
 
 class LLMCoordinator:
     def __init__(self):
-        # Initialize LLM providers
-        self.providers = {
-            1: OpenAIProvider(),  # GPT-4
-            2: AnthropicProvider(),  # Claude 3
-            3: GoogleProvider(),  # Gemini Pro
-            4: MistralProvider(),  # Mistral Large
+        # Parse models from environment variable
+        models_str = os.getenv(
+            "MODELS",
+            "openai:gpt-4o,anthropic:claude-3-5-sonnet,google:gemini-1.5-pro,mistral:mistral-large-latest",
+        )
+        models_list = [m.strip() for m in models_str.split(",")]
+
+        # Initialize providers and model info based on the list
+        self.providers = {}
+        self.model_info = {}
+
+        provider_map = {
+            "openai": (OpenAIProvider, "OpenAI"),
+            "anthropic": (AnthropicProvider, "Anthropic"),
+            "google": (GoogleProvider, "Google"),
+            "mistral": (MistralProvider, "Mistral"),
         }
 
-        self.model_info = {
-            1: {"name": "GPT-4", "provider": "OpenAI"},
-            2: {"name": "Claude 3", "provider": "Anthropic"},
-            3: {"name": "Gemini Pro", "provider": "Google"},
-            4: {"name": "Mistral Large", "provider": "Mistral"},
-        }
+        for idx, model_spec in enumerate(models_list[:4], 1):  # Limit to 4 models
+            if ":" in model_spec:
+                provider_key, model_name = model_spec.split(":", 1)
+                provider_key = provider_key.lower()
+
+                if provider_key in provider_map:
+                    provider_class, provider_name = provider_map[provider_key]
+                    self.providers[idx] = provider_class()
+                    self.model_info[idx] = {"name": model_name, "provider": provider_name}
+                    logger.info(f"Loaded model {idx}: {model_name} ({provider_name})")
+                else:
+                    logger.warning(f"Unknown provider: {provider_key}")
+            else:
+                logger.warning(f"Invalid model specification: {model_spec}")
+
+        # Ensure we have at least some models
+        if not self.providers:
+            logger.error("No models loaded, using defaults")
+            self.providers = {
+                1: OpenAIProvider(),
+                2: AnthropicProvider(),
+                3: GoogleProvider(),
+                4: MistralProvider(),
+            }
+            self.model_info = {
+                1: {"name": "gpt-4o", "provider": "OpenAI"},
+                2: {"name": "claude-3-5-sonnet", "provider": "Anthropic"},
+                3: {"name": "gemini-1.5-pro", "provider": "Google"},
+                4: {"name": "mistral-large-latest", "provider": "Mistral"},
+            }
 
     async def process_message(self, message: Message, websocket: WebSocket):
         # Determine which models to send to
@@ -69,7 +108,13 @@ class LLMCoordinator:
             )
 
             # Stream responses from the provider
+            logger.info(f"Starting to stream from {model_info['name']} (model_id: {model_id})")
+            chunk_count = 0
             async for chunk in provider.stream_completion(message.content):
+                chunk_count += 1
+                logger.debug(
+                    f"Received chunk {chunk_count} from {model_info['name']}: {chunk[:50]}..."
+                )
                 response = StreamingResponse(
                     model_id=model_id,
                     model_name=model_info["name"],
@@ -81,6 +126,7 @@ class LLMCoordinator:
                 await websocket.send_text(
                     json.dumps({"type": "stream_chunk", "data": response.model_dump(mode="json")})
                 )
+            logger.info(f"Finished streaming from {model_info['name']}, sent {chunk_count} chunks")
 
             # Send completion signal
             await websocket.send_text(

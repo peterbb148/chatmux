@@ -50,12 +50,10 @@ export const useKeyboardShortcuts = () => {
           const target = e.target as HTMLElement
           const isInputField = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA'
 
-          // Allow Enter in input fields for sending
-          if (shortcut.key === 'Enter' && isInputField) {
-            if (!e.shiftKey) {
-              e.preventDefault()
-              shortcut.handler()
-            }
+          // For Cmd+Enter in input fields, trigger the handler
+          if (shortcut.key === 'Enter' && isInputField && (shortcut.cmd || shortcut.ctrl)) {
+            e.preventDefault()
+            shortcut.handler()
             return
           }
 

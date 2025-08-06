@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+</head>
+<body>
+    <h1>WebSocket Connection Test</h1>
+    <div id="status">Connecting...</div>
+    <script>
+        const ws = new WebSocket('ws://localhost:8000/ws');
+
+        ws.onopen = () => {
+            document.getElementById('status').innerHTML = 'Connected! Sending test message...';
+            ws.send(JSON.stringify({
+                content: 'Hello from test',
+                targets: [],
+                user_id: 'test-user'
+            }));
+        };
+
+        ws.onmessage = (event) => {
+            console.log('Received:', event.data);
+            document.getElementById('status').innerHTML += '<br>Received: ' + event.data;
+        };
+
+        ws.onerror = (error) => {
+            console.error('WebSocket error:', error);
+            document.getElementById('status').innerHTML = 'Error: ' + error;
+        };
+
+        ws.onclose = () => {
+            document.getElementById('status').innerHTML = 'Connection closed';
+        };
+    </script>
+</body>
+</html>

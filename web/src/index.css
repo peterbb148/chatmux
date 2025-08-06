@@ -29,3 +29,18 @@ body {
     background-color: #ffffff;
   }
 }
+
+/* Ensure consistent font sizes throughout the app */
+body {
+  font-size: 1rem; /* 16px - base size */
+}
+
+textarea {
+  font-size: 1rem !important; /* 16px - same as text-base */
+  line-height: 1.5rem !important;
+}
+
+textarea::placeholder {
+  font-size: 1rem; /* 16px - same as text-base */
+  line-height: 1.5rem;
+}

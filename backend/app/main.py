@@ -38,6 +38,16 @@ async def health_check():
     return {"status": "healthy"}
 
 
+@app.get("/models")
+async def get_models():
+    """Get the configured models"""
+    return {
+        "models": [
+            {"id": model_id, **info} for model_id, info in llm_coordinator.model_info.items()
+        ]
+    }
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)

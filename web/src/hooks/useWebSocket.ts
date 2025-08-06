@@ -19,14 +19,18 @@ export const useWebSocket = () => {
 
     // Set up message handler
     const unsubscribeMessage = websocketService.onMessage((message) => {
-      if (!message.model_id) return
+      console.log('useWebSocket received message:', message)
+
+      // Handle both direct model_id and nested data.model_id
+      const modelId = message.model_id || message.data?.model_id
+      if (!modelId && message.type !== 'stream_chunk') return
 
       switch (message.type) {
         case 'stream_start':
           setStreamingMessages(prev => {
             const newMap = new Map(prev)
-            newMap.set(message.model_id!, {
-              modelId: message.model_id!,
+            newMap.set(modelId, {
+              modelId: modelId,
               content: '',
               isComplete: false
             })
@@ -54,9 +58,9 @@ export const useWebSocket = () => {
         case 'stream_end':
           setStreamingMessages(prev => {
             const newMap = new Map(prev)
-            const existing = newMap.get(message.model_id!)
+            const existing = newMap.get(modelId)
             if (existing) {
-              newMap.set(message.model_id!, {
+              newMap.set(modelId, {
                 ...existing,
                 isComplete: true
               })
@@ -68,8 +72,8 @@ export const useWebSocket = () => {
         case 'error':
           setStreamingMessages(prev => {
             const newMap = new Map(prev)
-            newMap.set(message.model_id!, {
-              modelId: message.model_id!,
+            newMap.set(modelId, {
+              modelId: modelId,
               content: '',
               isComplete: true,
               error: message.error
@@ -101,10 +105,19 @@ export const useWebSocket = () => {
     return streamingMessages.get(modelId) || null
   }, [streamingMessages])
 
+  const clearMessageForModel = useCallback((modelId: number) => {
+    setStreamingMessages(prev => {
+      const newMap = new Map(prev)
+      newMap.delete(modelId)
+      return newMap
+    })
+  }, [])
+
   return {
     connected,
     sendMessage,
     getMessageForModel,
+    clearMessageForModel,
     streamingMessages
   }
 }

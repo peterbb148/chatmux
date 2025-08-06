@@ -29,10 +29,12 @@ const InputBox = forwardRef<InputBoxRef>((_, ref) => {
     }
   }))
 
-  // Register Enter shortcut
+  // Register Cmd+Enter shortcut
   useEffect(() => {
     const unsubscribe = registerShortcut({
       key: 'Enter',
+      cmd: true,
+      ctrl: true,
       description: 'Send message',
       handler: () => {
         // Only handle if textarea is focused
@@ -56,9 +58,9 @@ const InputBox = forwardRef<InputBoxRef>((_, ref) => {
   }
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    // Cmd+Enter is handled by the keyboard shortcut, so we only need to prevent default here
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
       e.preventDefault()
-      handleSend()
     }
   }
 
@@ -97,52 +99,41 @@ const InputBox = forwardRef<InputBoxRef>((_, ref) => {
   }
 
   return (
-    <div className="p-4 bg-gray-800">
-      <div className="max-w-full mx-auto">
+    <div className="py-4 bg-gray-800 rounded-b-xl">
+      <div className="max-w-full mx-auto px-4">
         {/* Connection status */}
         {!connected && (
-          <div className="text-xs text-red-400 mb-2">
+          <div className="text-base text-red-400 mb-2">
             Disconnected from server. Reconnecting...
           </div>
         )}
 
-        <div className="flex items-end gap-3">
-          <div className="flex-1">
-            <div className="text-xs text-gray-400 mb-1">
-              {targets.length > 0
-                ? `Sending to: Model${targets.length > 1 ? 's' : ''} ${targets.join(', ')}`
-                : 'Sending to: All models'
-              }
-              <span className="ml-2 text-gray-500">
-                (Use @1-4 to target specific models)
-              </span>
-            </div>
-            <textarea
-              ref={textareaRef}
-              value={message}
-              onChange={handleChange}
-              onKeyDown={handleKeyDown}
-              placeholder="Type your message here..."
-              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg
-                         text-gray-100 placeholder-gray-400 resize-none
-                         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                         min-h-[40px] max-h-[200px]"
-              rows={1}
-              disabled={!connected}
-            />
+        <textarea
+          ref={textareaRef}
+          value={message}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          placeholder="Enter prompt here"
+          className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg
+                     text-base text-gray-100 placeholder:text-base placeholder:text-gray-400 resize-none
+                     focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                     min-h-[40px] max-h-[200px]"
+          rows={1}
+          disabled={!connected}
+        />
+        <div className="mt-3 flex justify-between items-center text-base text-gray-500">
+          <div>
+            {targets.length > 0
+              ? `Sending to: Model${targets.length > 1 ? 's' : ''} ${targets.join(', ')}`
+              : 'Sending to: All models'
+            }
+            <span className="ml-2">
+              (Use @1-4 to target specific models)
+            </span>
           </div>
-          <button
-            onClick={handleSend}
-            disabled={!message.trim() || !connected}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium
-                     hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed
-                     transition-colors duration-200"
-          >
-            Send
-          </button>
-        </div>
-        <div className="text-xs text-gray-500 mt-2">
-          Press Enter to send, Shift+Enter for new line
+          <div>
+            Press Cmd+Enter to send, Enter for new line
+          </div>
         </div>
       </div>
     </div>

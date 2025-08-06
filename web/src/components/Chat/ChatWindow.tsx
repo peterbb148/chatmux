@@ -21,7 +21,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ id, modelName, provider }) => {
   const [isCopied, setIsCopied] = React.useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const windowRef = useRef<HTMLDivElement>(null)
-  const { getMessageForModel } = useWebSocketContext()
+  const { getMessageForModel, clearMessageForModel } = useWebSocketContext()
   const { focusedWindowId, registerClearHandler, unregisterClearHandler } = useAppState()
   const { registerShortcut } = useKeyboardShortcutsContext()
 
@@ -29,6 +29,17 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ id, modelName, provider }) => {
 
   const streamingMessage = getMessageForModel(id)
   const isStreaming = streamingMessage && !streamingMessage.isComplete
+
+  // Debug logging
+  useEffect(() => {
+    if (streamingMessage) {
+      console.log(`ChatWindow ${id} streaming:`, {
+        content: streamingMessage.content,
+        isComplete: streamingMessage.isComplete,
+        error: streamingMessage.error
+      })
+    }
+  }, [streamingMessage, id])
 
   // Auto-scroll to bottom when new messages arrive
   const scrollToBottom = () => {
@@ -105,43 +116,61 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ id, modelName, provider }) => {
     }
   }, [])
 
+  // Add completed streaming message to messages array
+  useEffect(() => {
+    console.log(`ChatWindow ${id} - checking completion:`, {
+      hasStreamingMessage: !!streamingMessage,
+      isComplete: streamingMessage?.isComplete,
+      hasContent: !!streamingMessage?.content,
+      contentLength: streamingMessage?.content?.length
+    })
+
+    if (streamingMessage && streamingMessage.isComplete && streamingMessage.content) {
+      console.log(`ChatWindow ${id} - adding completed message to array`)
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: streamingMessage.content,
+        timestamp: new Date()
+      }])
+      // Clear the streaming message after adding it to messages
+      clearMessageForModel(id)
+    }
+  }, [streamingMessage?.isComplete, streamingMessage?.content, id, clearMessageForModel])
+
   return (
     <div
       ref={windowRef}
-      className={`bg-gray-800 rounded-lg border-2 flex flex-col h-full transition-all ${
+      className={`bg-gray-800 rounded-lg border-2 flex flex-col h-full transition-all overflow-hidden ${
         isFocused ? 'border-blue-500 shadow-lg shadow-blue-500/20' : 'border-gray-700'
       }`}
       onClick={() => {
         // Optional: click to focus
       }}
     >
-      {/* Header */}
-      <div className={`px-3 py-2 rounded-t-lg border-b flex justify-between items-center ${
+      {/* Header - Fixed */}
+      <div className={`px-3 py-2 rounded-t-lg border-b flex justify-between items-center flex-shrink-0 ${
         isFocused ? 'bg-blue-900/30 border-blue-600' : 'bg-gray-700 border-gray-600'
       }`}>
-        <div>
-          <h3 className="font-semibold flex items-center gap-2">
-            <span className={`text-sm px-2 py-0.5 rounded ${
-              isFocused ? 'bg-blue-600' : 'bg-gray-600'
-            }`}>{id}</span>
-            {modelName}
-          </h3>
-          <p className="text-xs text-gray-400">{provider}</p>
-        </div>
+        <h3 className="text-base font-semibold flex items-center gap-2">
+          <span className={`px-2 py-0.5 rounded ${
+            isFocused ? 'bg-blue-600' : 'bg-gray-600'
+          }`}>{id}:</span>
+          {modelName}
+        </h3>
         <div className="flex items-center gap-2">
           {isCopied && (
-            <span className="text-xs text-green-400">Copied!</span>
+            <span className="text-base text-green-400">Copied!</span>
           )}
           {isStreaming && (
-            <span className="text-xs text-blue-400 animate-pulse">Thinking...</span>
+            <span className="text-base text-blue-400 animate-pulse">Thinking...</span>
           )}
         </div>
       </div>
 
-      {/* Messages area */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+      {/* Messages area - Scrollable */}
+      <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
         {messages.length === 0 && !streamingMessage ? (
-          <p className="text-gray-500 text-sm text-center mt-4">
+          <p className="text-gray-500 text-base text-center mt-4">
             Waiting for messages...
           </p>
         ) : (
@@ -149,24 +178,31 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ id, modelName, provider }) => {
             {messages.map((message, index) => (
               <div
                 key={index}
-                className={`${
-                  message.role === 'user'
-                    ? 'bg-blue-900/30 ml-8'
-                    : 'bg-gray-700/50 mr-8'
-                } rounded-lg p-3`}
+                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} mb-3`}
               >
-                <div className="text-xs text-gray-400 mb-1">
-                  {message.role === 'user' ? 'You' : modelName}
+                <div
+                  className={`max-w-[80%] ${
+                    message.role === 'user'
+                      ? 'bg-blue-900/30'
+                      : 'bg-gray-700/50'
+                  } rounded-lg p-3`}
+                >
+                  <div className="text-base mb-1" style={{ color: 'black', fontWeight: 'bold' }}>
+                    {message.role === 'user' ? 'You' : modelName}
+                  </div>
+                  <div className="text-base whitespace-pre-wrap">{message.content}</div>
                 </div>
-                <div className="text-sm whitespace-pre-wrap">{message.content}</div>
               </div>
             ))}
 
             {/* Streaming message */}
             {streamingMessage && (
-              <div className="bg-gray-700/50 mr-8 rounded-lg p-3">
-                <div className="text-xs text-gray-400 mb-1">{modelName}</div>
-                <div className="text-sm whitespace-pre-wrap">
+              <div className="flex justify-start mb-3">
+                <div className="max-w-[80%] bg-gray-700/50 rounded-lg p-3">
+                <div className="text-base mb-1" style={{ color: 'black', fontWeight: 'bold' }}>
+                  {modelName}
+                </div>
+                <div className="text-base whitespace-pre-wrap">
                   {streamingMessage.error ? (
                     <span className="text-red-400">Error: {streamingMessage.error}</span>
                   ) : (
@@ -175,6 +211,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ id, modelName, provider }) => {
                       {isStreaming && <span className="animate-pulse">▊</span>}
                     </>
                   )}
+                </div>
                 </div>
               </div>
             )}
