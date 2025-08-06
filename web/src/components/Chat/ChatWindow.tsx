@@ -18,7 +18,6 @@ interface Message {
 
 const ChatWindow: React.FC<ChatWindowProps> = ({ id, modelName }) => {
   const [messages, setMessages] = React.useState<Message[]>([])
-  const [userMessage, setUserMessage] = React.useState<string>('')
   const [isCopied, setIsCopied] = React.useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const windowRef = useRef<HTMLDivElement>(null)
@@ -55,7 +54,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ id, modelName }) => {
   useEffect(() => {
     const clearMessages = () => {
       setMessages([])
-      setUserMessage('')
     }
 
     registerClearHandler(id, clearMessages)
@@ -93,22 +91,15 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ id, modelName }) => {
     return unsubscribe
   }, [isFocused, registerShortcut, messages, modelName, streamingMessage])
 
-  // Add user message when streaming starts
-  useEffect(() => {
-    if (streamingMessage && userMessage) {
-      setMessages(prev => [...prev, {
-        role: 'user',
-        content: userMessage,
-        timestamp: new Date()
-      }])
-      setUserMessage('')
-    }
-  }, [streamingMessage, userMessage])
-
-  // Store user message temporarily when a new stream starts
+  // Add user message immediately when sent
   useEffect(() => {
     const handleUserMessage = (event: CustomEvent<{ content: string }>) => {
-      setUserMessage(event.detail.content)
+      // Add user message to all chat windows immediately
+      setMessages(prev => [...prev, {
+        role: 'user',
+        content: event.detail.content,
+        timestamp: new Date()
+      }])
     }
 
     window.addEventListener('userMessageSent' as any, handleUserMessage as any)
