@@ -1,12 +1,49 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, forwardRef, useImperativeHandle, useEffect } from 'react'
 import type { KeyboardEvent } from 'react'
 import { useWebSocketContext } from '../../contexts/WebSocketContext'
+import { useKeyboardShortcutsContext } from '../../contexts/KeyboardShortcutsContext'
 
-const InputBox: React.FC = () => {
+export interface InputBoxRef {
+  focus: () => void
+  clear: () => void
+}
+
+const InputBox = forwardRef<InputBoxRef>((_, ref) => {
   const [message, setMessage] = useState('')
   const [targets, setTargets] = useState<number[]>([])
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const { sendMessage, connected } = useWebSocketContext()
+  const { registerShortcut } = useKeyboardShortcutsContext()
+
+  // Expose methods via ref
+  useImperativeHandle(ref, () => ({
+    focus: () => {
+      textareaRef.current?.focus()
+    },
+    clear: () => {
+      setMessage('')
+      setTargets([])
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto'
+      }
+    }
+  }))
+
+  // Register Enter shortcut
+  useEffect(() => {
+    const unsubscribe = registerShortcut({
+      key: 'Enter',
+      description: 'Send message',
+      handler: () => {
+        // Only handle if textarea is focused
+        if (document.activeElement === textareaRef.current) {
+          handleSend()
+        }
+      }
+    })
+
+    return unsubscribe
+  }, [message]) // Include message in deps so handler has current value
 
   // Parse @mentions from the message
   const parseTargets = (text: string): number[] => {
@@ -110,6 +147,8 @@ const InputBox: React.FC = () => {
       </div>
     </div>
   )
-}
+})
+
+InputBox.displayName = 'InputBox'
 
 export default InputBox
