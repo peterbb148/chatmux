@@ -1,5 +1,7 @@
 import React, { useEffect, useRef } from 'react'
 import { useWebSocketContext } from '../../contexts/WebSocketContext'
+import { useAppState } from '../../contexts/AppStateContext'
+import { useKeyboardShortcutsContext } from '../../contexts/KeyboardShortcutsContext'
 
 interface ChatWindowProps {
   id: number
@@ -16,8 +18,14 @@ interface Message {
 const ChatWindow: React.FC<ChatWindowProps> = ({ id, modelName, provider }) => {
   const [messages, setMessages] = React.useState<Message[]>([])
   const [userMessage, setUserMessage] = React.useState<string>('')
+  const [isCopied, setIsCopied] = React.useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const windowRef = useRef<HTMLDivElement>(null)
   const { getMessageForModel } = useWebSocketContext()
+  const { focusedWindowId, registerClearHandler, unregisterClearHandler } = useAppState()
+  const { registerShortcut } = useKeyboardShortcutsContext()
+
+  const isFocused = focusedWindowId === id
 
   const streamingMessage = getMessageForModel(id)
   const isStreaming = streamingMessage && !streamingMessage.isComplete
@@ -30,6 +38,48 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ id, modelName, provider }) => {
   useEffect(() => {
     scrollToBottom()
   }, [messages, streamingMessage])
+
+  // Register clear handler
+  useEffect(() => {
+    const clearMessages = () => {
+      setMessages([])
+      setUserMessage('')
+    }
+
+    registerClearHandler(id, clearMessages)
+    return () => unregisterClearHandler(id)
+  }, [id, registerClearHandler, unregisterClearHandler])
+
+  // Register copy shortcut when focused
+  useEffect(() => {
+    if (!isFocused) return
+
+    const unsubscribe = registerShortcut({
+      key: 'c',
+      ctrl: true,
+      cmd: true,
+      description: 'Copy focused window content',
+      handler: () => {
+        const allContent = messages.map(m =>
+          `${m.role === 'user' ? 'You' : modelName}: ${m.content}`
+        ).join('\n\n')
+
+        const currentStreaming = streamingMessage?.content || ''
+        const fullContent = currentStreaming
+          ? allContent + (allContent ? '\n\n' : '') + `${modelName}: ${currentStreaming}`
+          : allContent
+
+        if (fullContent) {
+          navigator.clipboard.writeText(fullContent).then(() => {
+            setIsCopied(true)
+            setTimeout(() => setIsCopied(false), 2000)
+          })
+        }
+      }
+    })
+
+    return unsubscribe
+  }, [isFocused, registerShortcut, messages, modelName, streamingMessage])
 
   // Add user message when streaming starts
   useEffect(() => {
@@ -56,19 +106,36 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ id, modelName, provider }) => {
   }, [])
 
   return (
-    <div className="bg-gray-800 rounded-lg border border-gray-700 flex flex-col h-full">
+    <div
+      ref={windowRef}
+      className={`bg-gray-800 rounded-lg border-2 flex flex-col h-full transition-all ${
+        isFocused ? 'border-blue-500 shadow-lg shadow-blue-500/20' : 'border-gray-700'
+      }`}
+      onClick={() => {
+        // Optional: click to focus
+      }}
+    >
       {/* Header */}
-      <div className="bg-gray-700 px-3 py-2 rounded-t-lg border-b border-gray-600 flex justify-between items-center">
+      <div className={`px-3 py-2 rounded-t-lg border-b flex justify-between items-center ${
+        isFocused ? 'bg-blue-900/30 border-blue-600' : 'bg-gray-700 border-gray-600'
+      }`}>
         <div>
           <h3 className="font-semibold flex items-center gap-2">
-            <span className="text-sm bg-gray-600 px-2 py-0.5 rounded">{id}</span>
+            <span className={`text-sm px-2 py-0.5 rounded ${
+              isFocused ? 'bg-blue-600' : 'bg-gray-600'
+            }`}>{id}</span>
             {modelName}
           </h3>
           <p className="text-xs text-gray-400">{provider}</p>
         </div>
-        {isStreaming && (
-          <span className="text-xs text-blue-400 animate-pulse">Thinking...</span>
-        )}
+        <div className="flex items-center gap-2">
+          {isCopied && (
+            <span className="text-xs text-green-400">Copied!</span>
+          )}
+          {isStreaming && (
+            <span className="text-xs text-blue-400 animate-pulse">Thinking...</span>
+          )}
+        </div>
       </div>
 
       {/* Messages area */}
