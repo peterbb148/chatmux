@@ -98,7 +98,6 @@ class GridLayout:
             self.focused_index = index
             self.panes[self.focused_index].set_focused(True)
 
-
     def render(self) -> RenderableType:
         """Render the grid layout.
 
@@ -108,11 +107,11 @@ class GridLayout:
         # Always create a fresh layout structure to avoid update issues
         # This matches the working pattern from our debug test
         layout = Layout(name="main")
-        
+
         # Create 2x3 grid structure with smaller minimum sizes
         top_row = Layout(name="top_row", ratio=1, minimum_size=8)
         bottom_row = Layout(name="bottom_row", ratio=1, minimum_size=8)
-        
+
         # Create a 2D grid of panels
         grid: list[list[Panel | None]] = [
             [None for _ in range(self.cols)] for _ in range(self.rows)
@@ -152,20 +151,20 @@ class GridLayout:
         # Split top row into 3 columns with the actual panels
         top_row.split_row(
             Layout(grid[0][0], name="top_0_0"),
-            Layout(grid[0][1], name="top_0_1"), 
-            Layout(grid[0][2], name="top_0_2")
+            Layout(grid[0][1], name="top_0_1"),
+            Layout(grid[0][2], name="top_0_2"),
         )
-        
+
         # Split bottom row into 3 columns with the actual panels
         bottom_row.split_row(
             Layout(grid[1][0], name="bottom_1_0"),
             Layout(grid[1][1], name="bottom_1_1"),
-            Layout(grid[1][2], name="bottom_1_2")
+            Layout(grid[1][2], name="bottom_1_2"),
         )
-        
+
         # Combine the rows
         layout.split_column(top_row, bottom_row)
-        
+
         return layout
 
     def start_live_display(self) -> None:

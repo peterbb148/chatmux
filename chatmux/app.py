@@ -7,7 +7,6 @@ from contextlib import suppress
 from typing import Any
 
 from rich.console import Console
-from rich.live import Live
 
 # Handle both direct execution and module import
 try:
@@ -20,6 +19,7 @@ try:
 except ImportError:
     # Direct execution - add parent directory to path
     from pathlib import Path
+
     sys.path.insert(0, str(Path(__file__).parent.parent))
 
     from chatmux.config import config
@@ -148,7 +148,7 @@ class ChatmuxApp:
         # Update panes to show "thinking" state and refresh display
         for pane in target_panes:
             pane.set_content(f"💭 Thinking about: {message[:30]}...")
-        
+
         # The "thinking" state will be visible in the panes automatically
 
         # Send to models (placeholder - actual model calls would happen here)
@@ -167,16 +167,20 @@ class ChatmuxApp:
     async def _simulate_model_responses(self, message: str, target_panes: list) -> None:
         """Simulate model responses (placeholder until real integration)."""
         import asyncio
-        
+
         for i, pane in enumerate(target_panes):
             # Simulate different response times
             await asyncio.sleep(0.5 + i * 0.3)
-            
+
             # Generate a placeholder response
-            response = f"[Response to: '{message[:20]}...']\n\nThis is a simulated response from {pane.model_name}. In the real implementation, this would be the actual AI model response."
-            
+            response = (
+                f"[Response to: '{message[:20]}...']\n\n"
+                f"This is a simulated response from {pane.model_name}. "
+                "In the real implementation, this would be the actual AI model response."
+            )
+
             pane.set_content(response)
-            
+
             # Response will be visible in the pane automatically
 
     async def _process_keyboard_events(self) -> None:
@@ -231,13 +235,13 @@ class ChatmuxApp:
                         else:
                             # Translate raw characters to key names for input handler
                             key_name = self._translate_char_to_key(char)
-                            
+
                             # Special handling for Enter key
                             if char in ("\r", "\n"):
                                 # Get content BEFORE processing Enter
                                 input_pane = self.input_handler.get_input_pane()
                                 content = input_pane.state.current_text.strip()
-                                
+
                                 # Process the content
                                 if content:
                                     targets = input_pane._parse_model_targets(content)
@@ -245,19 +249,18 @@ class ChatmuxApp:
                                     asyncio.create_task(self._handle_input(content, targets))
                                     # Clear the input pane manually
                                     input_pane.clear()
-                                
-                                handled = True
+
                             else:
                                 # For non-Enter keys, use normal input handler processing
-                                handled = self.input_handler.handle_key(key_name)
-                                
+                                self.input_handler.handle_key(key_name)
+
                                 # Input pane within the grid shows typing automatically
                                 # No additional display updates needed to avoid scrolling
 
                 except BlockingIOError:
                     # No input available, sleep briefly
                     await asyncio.sleep(0.01)
-                except Exception as e:
+                except Exception:
                     # Log error but continue silently to avoid display corruption
                     pass
 
@@ -277,13 +280,15 @@ class ChatmuxApp:
         self._setup_model_panes()
 
         # Display compact welcome message
-        self.console.print("[bold cyan]Chatmux[/bold cyan] | ESC/Ctrl+C: quit | Enter: send | @model: target")
+        self.console.print(
+            "[bold cyan]Chatmux[/bold cyan] | ESC/Ctrl+C: quit | Enter: send | @model: target"
+        )
 
         # Use simple display update instead of Live for Warp compatibility
         try:
             # Initial render - print without extra newline
             self.console.print(self.grid.render(), end="")
-            
+
             # Process keyboard events without Live display
             try:
                 await self._process_keyboard_events()

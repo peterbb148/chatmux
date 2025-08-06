@@ -154,15 +154,15 @@ def main() -> None:
         # Determine which UI to use
         # Default to Textual unless --legacy is specified
         use_textual = not args.legacy
-        
+
         # Override with --textual if specified
         if args.textual:
             use_textual = True
-            
+
         # Environment variable can also control this
         if os.environ.get("CHATMUX_USE_LEGACY", "").lower() == "true":
             use_textual = False
-            
+
         if use_textual:
             # Run Textual version (synchronous)
             textual_main()

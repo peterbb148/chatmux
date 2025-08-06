@@ -4,17 +4,18 @@ import asyncio
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
+from enum import Enum
 from uuid import UUID, uuid4
 
 from .config import config
 from .core.models import Message, MessageRole, ModelConfig, ModelProvider, TokenUsage
 from .models import ModelClient, RateLimitError
 from .models.openai_client import OpenAIClient
-from enum import Enum
 
 
 class PaneStatus(Enum):
     """Status of a model pane."""
+
     IDLE = "idle"
     STREAMING = "streaming"
     ERROR = "error"
@@ -132,16 +133,20 @@ class ResponseCoordinator:
         # Create tasks for each pane
         tasks: dict[str, ResponseTask] = {}
 
-        for config in target_configs:
+        for model_config in target_configs:
+            # Skip if no pane_id
+            if not model_config.pane_id:
+                continue
+
             # Create client
             try:
-                client = self._get_or_create_client(config.provider, config.model_name)
+                client = self._get_or_create_client(model_config.provider, model_config.model_name)
             except ValueError as e:
                 # Send error update
                 if self.on_stream_update:
                     self.on_stream_update(
                         StreamUpdate(
-                            pane_id=config.pane_id,
+                            pane_id=model_config.pane_id,
                             content="",
                             is_complete=True,
                             error=str(e),
@@ -150,15 +155,17 @@ class ResponseCoordinator:
                 continue
 
             # Create response task
-            response_task = ResponseTask(pane_id=config.pane_id, client=client, status=PaneStatus.STREAMING)
+            response_task = ResponseTask(
+                pane_id=model_config.pane_id, client=client, status=PaneStatus.STREAMING
+            )
 
             # Create async task
             response_task.task = asyncio.create_task(
                 self._handle_model_response(response_task, messages)
             )
 
-            tasks[config.pane_id] = response_task
-            
+            tasks[model_config.pane_id] = response_task
+
             # Send initial streaming status
             if self.on_stream_update:
                 self.on_stream_update(
