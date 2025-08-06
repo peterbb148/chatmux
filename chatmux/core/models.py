@@ -86,6 +86,7 @@ class ModelConfig(BaseModel):
     retry_attempts: int = Field(default=3, ge=0)
     retry_delay: float = Field(default=1.0, gt=0)
     enabled: bool = True
+    pane_id: str | None = None  # Optional pane identifier for UI integration
 
     @field_validator("model_name")
     @classmethod

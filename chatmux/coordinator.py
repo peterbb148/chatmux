@@ -10,7 +10,17 @@ from .config import config
 from .core.models import Message, MessageRole, ModelConfig, ModelProvider, TokenUsage
 from .models import ModelClient, RateLimitError
 from .models.openai_client import OpenAIClient
-from .ui.pane import ModelPane, PaneStatus
+from enum import Enum
+
+
+class PaneStatus(Enum):
+    """Status of a model pane."""
+    IDLE = "idle"
+    STREAMING = "streaming"
+    ERROR = "error"
+    COMPLETE = "complete"
+    RATE_LIMITED = "rate_limited"
+    CANCELLED = "cancelled"
 
 
 @dataclass
@@ -28,8 +38,10 @@ class StreamUpdate:
 class ResponseTask:
     """Tracks a response task for a specific model."""
 
-    pane: ModelPane
+    pane_id: str
     client: ModelClient
+    status: PaneStatus = PaneStatus.IDLE
+    content: str = ""
     task_id: UUID = field(default_factory=uuid4)
     task: asyncio.Task[None] | None = None
     start_time: datetime = field(default_factory=datetime.utcnow)
@@ -98,14 +110,14 @@ class ResponseCoordinator:
     async def send_to_models(
         self,
         message: str,
-        target_panes: list[ModelPane],
+        target_configs: list[ModelConfig],
         conversation_history: list[Message] | None = None,
     ) -> dict[str, ResponseTask]:
         """Send a message to multiple models concurrently.
 
         Args:
             message: The user message to send
-            target_panes: List of model panes to send to
+            target_configs: List of model configurations to send to
             conversation_history: Optional conversation history
 
         Returns:
@@ -120,20 +132,16 @@ class ResponseCoordinator:
         # Create tasks for each pane
         tasks: dict[str, ResponseTask] = {}
 
-        for pane in target_panes:
-            # Skip if pane has no model configured
-            if not pane.model_name:
-                continue
-
+        for config in target_configs:
             # Create client
             try:
-                client = self._get_or_create_client(pane.provider, pane.model_name)
+                client = self._get_or_create_client(config.provider, config.model_name)
             except ValueError as e:
                 # Send error update
                 if self.on_stream_update:
                     self.on_stream_update(
                         StreamUpdate(
-                            pane_id=pane.pane_id,
+                            pane_id=config.pane_id,
                             content="",
                             is_complete=True,
                             error=str(e),
@@ -142,18 +150,24 @@ class ResponseCoordinator:
                 continue
 
             # Create response task
-            response_task = ResponseTask(pane=pane, client=client)
-
-            # Update pane status
-            pane.set_status(PaneStatus.STREAMING)
-            pane.clear_content()
+            response_task = ResponseTask(pane_id=config.pane_id, client=client, status=PaneStatus.STREAMING)
 
             # Create async task
             response_task.task = asyncio.create_task(
                 self._handle_model_response(response_task, messages)
             )
 
-            tasks[pane.pane_id] = response_task
+            tasks[config.pane_id] = response_task
+            
+            # Send initial streaming status
+            if self.on_stream_update:
+                self.on_stream_update(
+                    StreamUpdate(
+                        pane_id=config.pane_id,
+                        content="",
+                        is_complete=False,
+                    )
+                )
             self.active_tasks[response_task.task_id] = response_task
 
         return tasks
@@ -170,13 +184,13 @@ class ResponseCoordinator:
             full_response = ""
             async for chunk in task.client.stream_response(messages):  # type: ignore[attr-defined]
                 full_response += chunk
-                task.pane.append_content(chunk)
+                task.content += chunk
 
                 # Send stream update
                 if self.on_stream_update:
                     self.on_stream_update(
                         StreamUpdate(
-                            pane_id=task.pane.pane_id,
+                            pane_id=task.pane_id,
                             content=chunk,
                             is_complete=False,
                         )
@@ -188,14 +202,14 @@ class ResponseCoordinator:
             # TODO: Implement token usage tracking for streaming responses
 
             # Mark as complete
-            task.pane.set_status(PaneStatus.COMPLETE)
+            task.status = PaneStatus.COMPLETE
             task.end_time = datetime.utcnow()
 
             # Send completion update
             if self.on_stream_update:
                 self.on_stream_update(
                     StreamUpdate(
-                        pane_id=task.pane.pane_id,
+                        pane_id=task.pane_id,
                         content="",
                         is_complete=True,
                         token_usage=token_usage,
@@ -220,14 +234,14 @@ class ResponseCoordinator:
             messages: Messages to retry
             error: The rate limit error
         """
-        task.pane.set_status(PaneStatus.RATE_LIMITED)
+        task.status = PaneStatus.RATE_LIMITED
         task.error = error
 
         # Send error update
         if self.on_stream_update:
             self.on_stream_update(
                 StreamUpdate(
-                    pane_id=task.pane.pane_id,
+                    pane_id=task.pane_id,
                     content="",
                     is_complete=True,
                     error=f"Rate limited: {error}",
@@ -243,10 +257,10 @@ class ResponseCoordinator:
             await asyncio.sleep(backoff + jitter)
 
             # Retry
-            task.pane.set_status(PaneStatus.STREAMING)
+            task.status = PaneStatus.STREAMING
             await self._handle_model_response(task, messages)
         else:
-            task.pane.set_status(PaneStatus.ERROR)
+            task.status = PaneStatus.ERROR
 
     async def _handle_error(self, task: ResponseTask, error: Exception) -> None:
         """Handle general errors.
@@ -255,18 +269,18 @@ class ResponseCoordinator:
             task: The response task
             error: The error that occurred
         """
-        task.pane.set_status(PaneStatus.ERROR)
+        task.status = PaneStatus.ERROR
         task.error = error
         task.end_time = datetime.utcnow()
 
         error_message = str(error)
-        task.pane.append_content(f"\n\n[Error: {error_message}]")
+        task.content += f"\n\n[Error: {error_message}]"
 
         # Send error update
         if self.on_stream_update:
             self.on_stream_update(
                 StreamUpdate(
-                    pane_id=task.pane.pane_id,
+                    pane_id=task.pane_id,
                     content="",
                     is_complete=True,
                     error=error_message,
@@ -279,7 +293,7 @@ class ResponseCoordinator:
         for response_task in tasks:
             if response_task.task and not response_task.task.done():
                 response_task.task.cancel()
-                response_task.pane.set_status(PaneStatus.CANCELLED)
+                response_task.status = PaneStatus.CANCELLED
 
         # Wait for all tasks to complete
         await asyncio.gather(*[t.task for t in tasks if t.task], return_exceptions=True)

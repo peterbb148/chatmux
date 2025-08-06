@@ -8,7 +8,7 @@ from pathlib import Path
 
 from . import __version__
 from .app import main as app_main
-from .textual_app import main as textual_main
+from .chatmux import main as textual_main
 from .config import config
 
 

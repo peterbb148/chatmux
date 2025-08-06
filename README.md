@@ -6,60 +6,71 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
-A terminal-based multi-LLM chat interface that allows you to send prompts to multiple AI models simultaneously and compare their responses side-by-side in a tmux-inspired grid layout.
+A web-based multi-LLM chat interface that allows you to send prompts to multiple AI models simultaneously and compare their responses side-by-side in a clean, modern UI.
 
 ## Overview
 
-Chatmux is designed for developers and researchers who want to efficiently compare outputs from different language models without switching between multiple browser tabs or applications. It provides a clean, keyboard-driven terminal interface with real-time streaming responses.
+Chatmux is designed for developers and researchers who want to efficiently compare outputs from different language models without switching between multiple browser tabs or applications. It provides a responsive web interface with real-time streaming responses and intuitive keyboard shortcuts.
 
 ## Key Features
 
 - **Multi-Model Chat**: Send one prompt to multiple AI models simultaneously
-- **Grid Layout**: 2x3 terminal grid showing responses from up to 5 models plus input pane
-- **Model Targeting**: Use `@model_name` syntax to send followup prompts to specific models
-- **Real-time Streaming**: Async streaming responses with independent error handling
-- **Local Storage**: Conversation history and prompt library stored locally
-- **Keyboard Navigation**: Direct shortcuts (Ctrl+1-5) for model pane focus
+- **Web-Based UI**: Modern, responsive interface accessible from any browser
+- **Model Targeting**: Use `@1-4` syntax to send prompts to specific models
+- **Real-time Streaming**: WebSocket-based streaming responses with independent error handling
+- **Clean Layout**: Two-row design with chat windows above and full-width input below
+- **Keyboard Shortcuts**: Press Enter to send to all models, use @n for targeted sending
 - **Configuration**: Simple .env file for API keys and model settings
 
 ## Supported Models
 
-- OpenAI (GPT-4, GPT-3.5)
-- Anthropic (Claude 3.5, Claude 3)
-- Google Gemini
-- Mistral AI
-- Ollama (local models)
+Currently configured for frontier models:
+- OpenAI (GPT-4)
+- Anthropic (Claude 3)
+- Google (Gemini Pro/Ultra)
+- Mistral (Mistral Large)
 
 ## Solution Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        Chatmux                              │
+│                     Chatmux Web UI                          │
 ├─────────────────────────────────────────────────────────────┤
-│  Terminal UI Layer (Rich/Textual)                          │
-│  ├── Grid Layout Manager (2x3)                             │
-│  ├── Model Response Panes                                  │
-│  ├── Input Handler                                         │
-│  └── Keyboard Shortcuts                                    │
+│  Frontend (React + TypeScript)                              │
+│  ├── Layout Components                                      │
+│  │   ├── Two-row CSS Grid Layout                          │
+│  │   ├── ChatWindow Components (1-4)                      │
+│  │   └── InputBox Component (full width)                  │
+│  ├── State Management                                       │
+│  │   ├── Chat History per Window                          │
+│  │   └── Active Connections Status                        │
+│  ├── WebSocket Client                                       │
+│  │   ├── Real-time Message Streaming                      │
+│  │   └── Connection Management                            │
+│  └── Input Parser (@n targeting)                           │
 ├─────────────────────────────────────────────────────────────┤
-│  Core Application Layer                                     │
-│  ├── Chat Session Manager                                  │
-│  ├── Async Response Coordinator                            │
-│  ├── Message Parser (@model targeting)                     │
-│  └── Configuration Manager                                 │
+│  Backend (FastAPI + WebSockets)                            │
+│  ├── WebSocket Server                                       │
+│  │   ├── Connection Handler                               │
+│  │   ├── Message Router                                    │
+│  │   └── Stream Aggregator                                │
+│  ├── API Endpoints                                          │
+│  │   ├── /ws - WebSocket endpoint                         │
+│  │   ├── /health - Health check                           │
+│  │   └── /config - Model configuration                    │
+│  └── Response Coordinator (adapted from CLI)               │
 ├─────────────────────────────────────────────────────────────┤
 │  Model Integration Layer                                    │
 │  ├── Abstract Model Interface                              │
-│  ├── OpenAI Client                                         │
-│  ├── Anthropic Client                                      │
-│  ├── Gemini Client                                         │
-│  ├── Mistral Client                                        │
-│  └── Ollama Client                                         │
+│  ├── OpenAI Client (GPT-4)                                │
+│  ├── Anthropic Client (Claude 3)                          │
+│  ├── Google Client (Gemini)                               │
+│  └── Mistral Client (Mistral Large)                       │
 ├─────────────────────────────────────────────────────────────┤
-│  Data Layer                                                │
-│  ├── Local Configuration (.env)                            │
-│  ├── Conversation History (SQLite)                         │
-│  └── Prompt Library                                        │
+│  Configuration & Storage                                    │
+│  ├── Environment Variables (.env)                          │
+│  ├── API Key Management                                    │
+│  └── Session Storage (optional)                            │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -68,25 +79,31 @@ Chatmux is designed for developers and researchers who want to efficiently compa
 ```bash
 git clone https://github.com/peterbb148/chatmux
 cd chatmux
+
+# Backend setup
 uv install
 cp .env.example .env
 # Edit .env with your API keys
-chatmux
+
+# Frontend setup
+cd web
+npm install
+
+# Start the application
+npm run dev  # Starts both backend and frontend
 ```
 
 ## Usage
 
-```bash
-# Start chatmux
-chatmux
+1. Open http://localhost:3000 in your browser
+2. Type your prompt in the input box at the bottom
+3. Press Enter to send to all models, or use @1-4 to target specific models
+4. Watch responses stream in real-time in the chat windows above
 
-# In the interface:
-# - Type prompts in bottom-right pane
-# - Responses appear in model panes
-# - Use @claude to target specific model
-# - Ctrl+1-5 to focus model panes
-# - Ctrl+Q to quit
-```
+Examples:
+- "Tell me a joke" - sends to all 4 models
+- "@1 Tell me a joke" - sends only to model 1 (OpenAI)
+- "@2 @4 Explain quantum computing" - sends to models 2 and 4
 
 ## Configuration
 
@@ -95,13 +112,11 @@ Create a `.env` file with your API keys:
 ```env
 # OpenAI
 OPENAI_API_KEY=your-openai-api-key
-OPENAI_MODEL_1=gpt-4
-OPENAI_MODEL_2=gpt-3.5-turbo
+OPENAI_MODEL=gpt-4
 
 # Anthropic
 ANTHROPIC_API_KEY=your-anthropic-api-key
-ANTHROPIC_MODEL_1=claude-3-5-sonnet-20241022
-ANTHROPIC_MODEL_2=claude-3-haiku-20240307
+ANTHROPIC_MODEL=claude-3-opus-20240229
 
 # Google Gemini
 GEMINI_API_KEY=your-gemini-api-key
@@ -110,10 +125,6 @@ GEMINI_MODEL=gemini-1.5-pro
 # Mistral
 MISTRAL_API_KEY=your-mistral-api-key
 MISTRAL_MODEL=mistral-large-latest
-
-# Ollama (local)
-OLLAMA_HOST=http://localhost:11434
-OLLAMA_MODEL=llama3.2
 ```
 
 ## Development
@@ -123,15 +134,22 @@ OLLAMA_MODEL=llama3.2
 git clone https://github.com/peterbb148/chatmux
 cd chatmux
 
-# Install dependencies
+# Backend development
 uv venv
 uv pip install -e .
-
-# Run tests
 uv run pytest
 
-# Run with development mode
-uv run python -m chatmux
+# Frontend development
+cd web
+npm install
+npm run dev
+
+# Run backend and frontend separately for development
+# Terminal 1: Backend
+uv run python -m chatmux.api
+
+# Terminal 2: Frontend
+cd web && npm start
 ```
 
 ## Contributing
@@ -148,6 +166,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Acknowledgments
 
-- Inspired by tmux's efficient terminal multiplexing
-- Built with Rich for beautiful terminal UIs
+- Inspired by the need to compare AI model responses efficiently
+- Built with FastAPI and React for a modern web experience
 - Powered by various AI model providers

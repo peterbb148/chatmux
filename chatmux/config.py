@@ -18,7 +18,7 @@ class Config(BaseSettings):
 
     # OpenAI Configuration
     openai_api_key: str | None = Field(None, description="OpenAI API key")
-    openai_model_1: str = Field("gpt-4", description="First OpenAI model")
+    openai_model_1: str = Field("gpt-4o", description="First OpenAI model")
     openai_model_2: str = Field("gpt-3.5-turbo", description="Second OpenAI model")
 
     # Anthropic Configuration
