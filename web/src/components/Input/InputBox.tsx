@@ -75,6 +75,7 @@ const InputBox = forwardRef<InputBoxRef>((_, ref) => {
     const targetModels = parseTargets(message)
     const cleanedMessage = stripMentions(message)
 
+
     // Don't send if the cleaned message is empty
     if (!cleanedMessage.trim()) return
 
