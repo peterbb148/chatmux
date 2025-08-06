@@ -79,7 +79,7 @@ class LLMCoordinator:
                 )
 
                 await websocket.send_text(
-                    json.dumps({"type": "stream_chunk", "data": response.dict()})
+                    json.dumps({"type": "stream_chunk", "data": response.model_dump(mode="json")})
                 )
 
             # Send completion signal
