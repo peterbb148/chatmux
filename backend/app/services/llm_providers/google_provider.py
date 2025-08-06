@@ -1,24 +1,80 @@
-import asyncio
 import logging
+import os
 from collections.abc import AsyncGenerator
 
+import google.generativeai as genai
+from dotenv import load_dotenv
+
 from .base import BaseLLMProvider
+
+# Load environment variables
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "../../../../.env"))
 
 logger = logging.getLogger(__name__)
 
 
 class GoogleProvider(BaseLLMProvider):
-    """Mock Google provider for development"""
+    """Google Gemini provider with streaming support"""
+
+    def __init__(self):
+        self.api_key = os.getenv("GOOGLE_API_KEY")
+        self.model_name = os.getenv("GOOGLE_MODEL_3", "gemini-1.5-pro")
+        self.model = None
+
+        if self.api_key:
+            genai.configure(api_key=self.api_key)
+            self.model = genai.GenerativeModel(self.model_name)
+            logger.info(f"Initialized Google provider with model: {self.model_name}")
+        else:
+            logger.warning("GOOGLE_API_KEY not found - Google provider will return mock responses")
 
     async def stream_completion(self, prompt: str) -> AsyncGenerator[str, None]:
-        # Mock streaming response
-        response = f"This is a mock response from Gemini Pro to: {prompt}"
-        words = response.split()
+        if not self.model:
+            # Return mock response if no API key
+            response = (
+                f"[Mock Google Response] This is a simulated response "
+                f"from {self.model_name} to: {prompt}"
+            )
+            words = response.split()
+            for word in words:
+                yield word + " "
+            return
 
-        for word in words:
-            yield word + " "
-            await asyncio.sleep(0.12)  # Different timing pattern
+        try:
+            logger.info(f"Starting Google stream for model: {self.model_name}")
+
+            # Google's SDK doesn't have native async streaming, so we use sync streaming
+            response = self.model.generate_content(
+                prompt,
+                generation_config=genai.GenerationConfig(
+                    max_output_tokens=2000,
+                    temperature=0.7,
+                ),
+                stream=True,
+            )
+
+            for chunk in response:
+                if chunk.text:
+                    yield chunk.text
+
+            logger.info("Google stream completed")
+
+        except Exception as e:
+            logger.error(f"Error in Google stream_completion: {e}")
+            yield f"Error: {str(e)}"
 
     async def get_completion(self, prompt: str) -> str:
-        # Mock non-streaming response
-        return f"This is a mock response from Gemini Pro to: {prompt}"
+        try:
+            response = self.model.generate_content(
+                prompt,
+                generation_config=genai.GenerationConfig(
+                    max_output_tokens=2000,
+                    temperature=0.7,
+                ),
+            )
+
+            return response.text
+
+        except Exception as e:
+            logger.error(f"Error in Google get_completion: {e}")
+            return f"Error: {str(e)}"
