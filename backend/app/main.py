@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 
@@ -66,8 +67,8 @@ async def websocket_endpoint(websocket: WebSocket):
 
             logger.info(f"Received message: {message.content}, targets: {message.targets}")
 
-            # Send to LLM coordinator for processing
-            await llm_coordinator.process_message(message, websocket)
+            # Send to LLM coordinator for processing (non-blocking)
+            asyncio.create_task(llm_coordinator.process_message(message, websocket))
 
     except WebSocketDisconnect:
         manager.disconnect(websocket)

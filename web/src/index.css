@@ -44,3 +44,79 @@ textarea::placeholder {
   font-size: 1rem; /* 16px - same as text-base */
   line-height: 1.5rem;
 }
+
+/* Custom markdown styling for chat messages */
+.prose-chat {
+  color: black;
+  max-width: none;
+}
+
+.prose-chat h1,
+.prose-chat h2,
+.prose-chat h3,
+.prose-chat h4,
+.prose-chat h5,
+.prose-chat h6 {
+  color: black;
+  font-weight: bold;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.prose-chat p {
+  color: black;
+  margin-bottom: 0.5rem;
+}
+
+.prose-chat code {
+  background-color: rgb(31 41 55); /* bg-gray-800 */
+  color: rgb(74 222 128); /* text-green-400 */
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.prose-chat pre {
+  background-color: rgb(17 24 39); /* bg-gray-900 */
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin-bottom: 1rem;
+}
+
+.prose-chat pre code {
+  background-color: transparent;
+  color: rgb(209 213 219); /* text-gray-300 */
+  padding: 0;
+}
+
+.prose-chat ul,
+.prose-chat ol {
+  color: black;
+  margin-bottom: 0.5rem;
+}
+
+.prose-chat li {
+  margin-bottom: 0.25rem;
+  color: black;
+}
+
+.prose-chat blockquote {
+  border-left: 4px solid rgb(75 85 99); /* border-gray-600 */
+  padding-left: 1rem;
+  font-style: italic;
+  color: black;
+  margin-bottom: 1rem;
+}
+
+.prose-chat strong,
+.prose-chat b {
+  color: black;
+  font-weight: bold;
+}
+
+.prose-chat em,
+.prose-chat i {
+  color: black;
+  font-style: italic;
+}

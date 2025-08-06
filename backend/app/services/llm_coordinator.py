@@ -85,9 +85,15 @@ class LLMCoordinator:
             else:
                 logger.warning(f"Unknown model ID: {model_id}")
 
-        # Wait for all tasks to complete
+        # Start all tasks concurrently but don't wait for completion
+        # Each model will stream independently
         if tasks:
-            await asyncio.gather(*tasks, return_exceptions=True)
+            logger.info(
+                f"Started {len(tasks)} concurrent streaming tasks for models: {target_models}"
+            )
+            # Fire and forget - let each model stream independently
+            for task in tasks:
+                task.add_done_callback(lambda t: self._log_task_completion(t))
 
     async def _stream_from_model(self, model_id: int, message: Message, websocket: WebSocket):
         try:
@@ -176,3 +182,10 @@ class LLMCoordinator:
                     )
                 except Exception:
                     pass
+
+    def _log_task_completion(self, task):
+        """Log when a streaming task completes"""
+        if task.exception():
+            logger.error(f"Streaming task failed: {task.exception()}")
+        else:
+            logger.info("Streaming task completed successfully")

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react'
+import ReactMarkdown from 'react-markdown'
 import { useWebSocketContext } from '../../contexts/WebSocketContext'
 import { useAppState } from '../../contexts/AppStateContext'
 import { useKeyboardShortcutsContext } from '../../contexts/KeyboardShortcutsContext'
@@ -15,7 +16,7 @@ interface Message {
   timestamp: Date
 }
 
-const ChatWindow: React.FC<ChatWindowProps> = ({ id, modelName, provider }) => {
+const ChatWindow: React.FC<ChatWindowProps> = ({ id, modelName }) => {
   const [messages, setMessages] = React.useState<Message[]>([])
   const [userMessage, setUserMessage] = React.useState<string>('')
   const [isCopied, setIsCopied] = React.useState(false)
@@ -190,7 +191,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ id, modelName, provider }) => {
                   <div className="text-base mb-1" style={{ color: 'black', fontWeight: 'bold' }}>
                     {message.role === 'user' ? 'You' : modelName}
                   </div>
-                  <div className="text-base whitespace-pre-wrap">{message.content}</div>
+                  <div className="text-base prose-chat">
+                    <ReactMarkdown>{message.content}</ReactMarkdown>
+                  </div>
                 </div>
               </div>
             ))}
@@ -202,12 +205,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ id, modelName, provider }) => {
                 <div className="text-base mb-1" style={{ color: 'black', fontWeight: 'bold' }}>
                   {modelName}
                 </div>
-                <div className="text-base whitespace-pre-wrap">
+                <div className="text-base prose-chat">
                   {streamingMessage.error ? (
                     <span className="text-red-400">Error: {streamingMessage.error}</span>
                   ) : (
                     <>
-                      {streamingMessage.content}
+                      <ReactMarkdown>{streamingMessage.content}</ReactMarkdown>
                       {isStreaming && <span className="animate-pulse">▊</span>}
                     </>
                   )}

@@ -33,15 +33,17 @@ export const useWebSocket = () => {
 
       switch (message.type) {
         case 'stream_start':
-          setStreamingMessages(prev => {
-            const newMap = new Map(prev)
-            newMap.set(modelId, {
-              modelId: modelId,
-              content: '',
-              isComplete: false
+          if (modelId) {
+            setStreamingMessages(prev => {
+              const newMap = new Map(prev)
+              newMap.set(modelId, {
+                modelId: modelId,
+                content: '',
+                isComplete: false
+              })
+              return newMap
             })
-            return newMap
-          })
+          }
           break
 
         case 'stream_chunk':
@@ -62,30 +64,34 @@ export const useWebSocket = () => {
           break
 
         case 'stream_end':
-          setStreamingMessages(prev => {
-            const newMap = new Map(prev)
-            const existing = newMap.get(modelId)
-            if (existing) {
-              newMap.set(modelId, {
-                ...existing,
-                isComplete: true
-              })
-            }
-            return newMap
-          })
+          if (modelId) {
+            setStreamingMessages(prev => {
+              const newMap = new Map(prev)
+              const existing = newMap.get(modelId)
+              if (existing) {
+                newMap.set(modelId, {
+                  ...existing,
+                  isComplete: true
+                })
+              }
+              return newMap
+            })
+          }
           break
 
         case 'error':
-          setStreamingMessages(prev => {
-            const newMap = new Map(prev)
-            newMap.set(modelId, {
-              modelId: modelId,
-              content: '',
-              isComplete: true,
-              error: message.error
+          if (modelId) {
+            setStreamingMessages(prev => {
+              const newMap = new Map(prev)
+              newMap.set(modelId, {
+                modelId: modelId,
+                content: '',
+                isComplete: true,
+                error: message.error
+              })
+              return newMap
             })
-            return newMap
-          })
+          }
           break
       }
     })
