@@ -23,6 +23,17 @@ export class WebSocketService {
   private connectionHandlers: ((connected: boolean) => void)[] = []
 
   connect(url: string) {
+    // Prevent multiple connections
+    if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
+      console.log('WebSocket is already connecting, skipping...')
+      return
+    }
+
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      console.log('WebSocket is already connected, skipping...')
+      return
+    }
+
     console.log('Attempting to connect to WebSocket:', url)
     try {
       this.ws = new WebSocket(url)

@@ -8,14 +8,20 @@ interface StreamingMessage {
   error?: string
 }
 
+// Create a flag to track if we've already connected
+let isConnected = false
+
 export const useWebSocket = () => {
   const [connected, setConnected] = useState(false)
   const [streamingMessages, setStreamingMessages] = useState<Map<number, StreamingMessage>>(new Map())
 
   useEffect(() => {
-    // Connect to WebSocket
-    const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws'
-    websocketService.connect(wsUrl)
+    // Only connect if we haven't already
+    if (!isConnected) {
+      const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws'
+      websocketService.connect(wsUrl)
+      isConnected = true
+    }
 
     // Set up message handler
     const unsubscribeMessage = websocketService.onMessage((message) => {
@@ -87,11 +93,11 @@ export const useWebSocket = () => {
     // Set up connection handler
     const unsubscribeConnection = websocketService.onConnectionChange(setConnected)
 
-    // Cleanup
+    // Cleanup - but don't disconnect the singleton WebSocket
     return () => {
       unsubscribeMessage()
       unsubscribeConnection()
-      websocketService.disconnect()
+      // Don't disconnect here - let the singleton manage its own lifecycle
     }
   }, [])
 

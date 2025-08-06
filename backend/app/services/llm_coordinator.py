@@ -94,18 +94,27 @@ class LLMCoordinator:
             provider = self.providers[model_id]
             model_info = self.model_info[model_id]
 
+            # Check if websocket is still connected before sending
+            if websocket.client_state.value != 1:  # 1 = CONNECTED
+                logger.warning(f"WebSocket disconnected before streaming model {model_id}")
+                return
+
             # Send initial response to indicate streaming started
-            await websocket.send_text(
-                json.dumps(
-                    {
-                        "type": "stream_start",
-                        "model_id": model_id,
-                        "model_name": model_info["name"],
-                        "provider": model_info["provider"],
-                        "timestamp": datetime.now().isoformat(),
-                    }
+            try:
+                await websocket.send_text(
+                    json.dumps(
+                        {
+                            "type": "stream_start",
+                            "model_id": model_id,
+                            "model_name": model_info["name"],
+                            "provider": model_info["provider"],
+                            "timestamp": datetime.now().isoformat(),
+                        }
+                    )
                 )
-            )
+            except Exception:
+                logger.warning(f"Failed to send stream_start for model {model_id}")
+                return
 
             # Stream responses from the provider
             logger.info(f"Starting to stream from {model_info['name']} (model_id: {model_id})")
@@ -123,26 +132,47 @@ class LLMCoordinator:
                     is_complete=False,
                 )
 
-                await websocket.send_text(
-                    json.dumps({"type": "stream_chunk", "data": response.model_dump(mode="json")})
-                )
+                # Check connection before each send
+                if websocket.client_state.value != 1:
+                    logger.warning(f"WebSocket disconnected during streaming for model {model_id}")
+                    break
+
+                try:
+                    await websocket.send_text(
+                        json.dumps(
+                            {"type": "stream_chunk", "data": response.model_dump(mode="json")}
+                        )
+                    )
+                except Exception:
+                    logger.warning(f"Failed to send chunk for model {model_id}")
+                    break
+
             logger.info(f"Finished streaming from {model_info['name']}, sent {chunk_count} chunks")
 
             # Send completion signal
-            await websocket.send_text(
-                json.dumps(
-                    {
-                        "type": "stream_end",
-                        "model_id": model_id,
-                        "model_name": model_info["name"],
-                        "provider": model_info["provider"],
-                        "timestamp": datetime.now().isoformat(),
-                    }
-                )
-            )
+            if websocket.client_state.value == 1:
+                try:
+                    await websocket.send_text(
+                        json.dumps(
+                            {
+                                "type": "stream_end",
+                                "model_id": model_id,
+                                "model_name": model_info["name"],
+                                "provider": model_info["provider"],
+                                "timestamp": datetime.now().isoformat(),
+                            }
+                        )
+                    )
+                except Exception:
+                    logger.warning(f"Failed to send stream_end for model {model_id}")
 
         except Exception as e:
             logger.error(f"Error streaming from model {model_id}: {e}")
-            await websocket.send_text(
-                json.dumps({"type": "error", "model_id": model_id, "error": str(e)})
-            )
+            # Only try to send error if websocket is still connected
+            if websocket.client_state.value == 1:
+                try:
+                    await websocket.send_text(
+                        json.dumps({"type": "error", "model_id": model_id, "error": str(e)})
+                    )
+                except Exception:
+                    pass
