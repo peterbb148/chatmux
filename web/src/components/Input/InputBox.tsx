@@ -1,10 +1,12 @@
 import React, { useState, useRef } from 'react'
 import type { KeyboardEvent } from 'react'
+import { useWebSocketContext } from '../../contexts/WebSocketContext'
 
 const InputBox: React.FC = () => {
   const [message, setMessage] = useState('')
   const [targets, setTargets] = useState<number[]>([])
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const { sendMessage, connected } = useWebSocketContext()
 
   // Parse @mentions from the message
   const parseTargets = (text: string): number[] => {
@@ -27,10 +29,14 @@ const InputBox: React.FC = () => {
     if (!message.trim()) return
 
     const targetModels = parseTargets(message)
-    console.log('Sending message:', message)
-    console.log('Targets:', targetModels.length > 0 ? targetModels : 'all')
 
-    // TODO: Send message via WebSocket
+    // Dispatch custom event for ChatWindow components to capture the message
+    window.dispatchEvent(new CustomEvent('userMessageSent', {
+      detail: { content: message }
+    }))
+
+    // Send message via WebSocket
+    sendMessage(message, targetModels)
 
     setMessage('')
     setTargets([])
@@ -56,6 +62,13 @@ const InputBox: React.FC = () => {
   return (
     <div className="p-4 bg-gray-800">
       <div className="max-w-full mx-auto">
+        {/* Connection status */}
+        {!connected && (
+          <div className="text-xs text-red-400 mb-2">
+            Disconnected from server. Reconnecting...
+          </div>
+        )}
+
         <div className="flex items-end gap-3">
           <div className="flex-1">
             <div className="text-xs text-gray-400 mb-1">
@@ -78,11 +91,12 @@ const InputBox: React.FC = () => {
                          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
                          min-h-[40px] max-h-[200px]"
               rows={1}
+              disabled={!connected}
             />
           </div>
           <button
             onClick={handleSend}
-            disabled={!message.trim()}
+            disabled={!message.trim() || !connected}
             className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium
                      hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed
                      transition-colors duration-200"
