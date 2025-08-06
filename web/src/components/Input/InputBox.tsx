@@ -57,6 +57,11 @@ const InputBox = forwardRef<InputBoxRef>((_, ref) => {
       .filter(n => n >= 1 && n <= 4)
   }
 
+  // Remove @mentions from the message content
+  const stripMentions = (text: string): string => {
+    return text.replace(/@(\d+)/g, '').replace(/\s+/g, ' ').trim()
+  }
+
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     // Cmd+Enter is handled by the keyboard shortcut, so we only need to prevent default here
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
@@ -68,14 +73,18 @@ const InputBox = forwardRef<InputBoxRef>((_, ref) => {
     if (!message.trim()) return
 
     const targetModels = parseTargets(message)
+    const cleanedMessage = stripMentions(message)
 
-    // Dispatch custom event for ChatWindow components to capture the message
+    // Don't send if the cleaned message is empty
+    if (!cleanedMessage.trim()) return
+
+    // Dispatch custom event for ChatWindow components to capture the original message
     window.dispatchEvent(new CustomEvent('userMessageSent', {
       detail: { content: message }
     }))
 
-    // Send message via WebSocket
-    sendMessage(message, targetModels)
+    // Send cleaned message (without @mentions) via WebSocket
+    sendMessage(cleanedMessage, targetModels)
 
     setMessage('')
     setTargets([])
