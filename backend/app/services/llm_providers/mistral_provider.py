@@ -1,6 +1,7 @@
 import logging
 import os
 from collections.abc import AsyncGenerator
+from typing import Any
 
 from dotenv import load_dotenv
 from mistralai import Mistral
@@ -29,7 +30,9 @@ class MistralProvider(BaseLLMProvider):
                 "MISTRAL_API_KEY not found - Mistral provider will return mock responses"
             )
 
-    async def stream_completion(self, prompt: str) -> AsyncGenerator[str, None]:
+    async def stream_completion(
+        self, prompt: str, messages: list[dict[str, Any]] = None
+    ) -> AsyncGenerator[str, None]:
         if not self.client:
             # Return mock response if no API key
             response = (
@@ -44,10 +47,17 @@ class MistralProvider(BaseLLMProvider):
         try:
             logger.info(f"Starting Mistral stream for model: {self.model_name}")
 
+            # Format messages for Mistral API
+            if messages:
+                # Append the current prompt as the latest user message
+                conversation = messages + [{"role": "user", "content": prompt}]
+            else:
+                conversation = [{"role": "user", "content": prompt}]
+
             # Mistral SDK uses sync streaming
             response = self.client.chat.stream(
                 model=self.model_name,
-                messages=[{"role": "user", "content": prompt}],
+                messages=conversation,
                 max_tokens=2000,
                 temperature=0.7,
             )
@@ -62,7 +72,7 @@ class MistralProvider(BaseLLMProvider):
             logger.error(f"Error in Mistral stream_completion: {e}")
             yield f"Error: {str(e)}"
 
-    async def get_completion(self, prompt: str) -> str:
+    async def get_completion(self, prompt: str, messages: list[dict[str, Any]] = None) -> str:
         if not self.client:
             return (
                 f"[Mock Mistral Response] This is a simulated response "

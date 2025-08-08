@@ -1,6 +1,7 @@
 import logging
 import os
 from collections.abc import AsyncGenerator
+from typing import Any
 
 from anthropic import AsyncAnthropic
 from dotenv import load_dotenv
@@ -28,7 +29,9 @@ class AnthropicProvider(BaseLLMProvider):
                 "ANTHROPIC_API_KEY not found - Anthropic provider will return mock responses"
             )
 
-    async def stream_completion(self, prompt: str) -> AsyncGenerator[str, None]:
+    async def stream_completion(
+        self, prompt: str, messages: list[dict[str, Any]] = None
+    ) -> AsyncGenerator[str, None]:
         model_name = os.getenv("ANTHROPIC_MODEL_2", "claude-3-5-sonnet-20241022")
 
         if not self.client:
@@ -45,9 +48,16 @@ class AnthropicProvider(BaseLLMProvider):
         try:
             logger.info(f"Starting Anthropic stream for model: {model_name}")
 
+            # Format messages for Anthropic API
+            if messages:
+                # Append the current prompt as the latest user message
+                conversation = messages + [{"role": "user", "content": prompt}]
+            else:
+                conversation = [{"role": "user", "content": prompt}]
+
             async with self.client.messages.stream(
                 model=model_name,
-                messages=[{"role": "user", "content": prompt}],
+                messages=conversation,
                 max_tokens=2000,
                 temperature=0.7,
             ) as stream:
@@ -60,7 +70,7 @@ class AnthropicProvider(BaseLLMProvider):
             logger.error(f"Error in Anthropic stream_completion: {e}")
             yield f"Error: {str(e)}"
 
-    async def get_completion(self, prompt: str) -> str:
+    async def get_completion(self, prompt: str, messages: list[dict[str, Any]] = None) -> str:
         try:
             model_name = os.getenv("ANTHROPIC_MODEL_2", "claude-3-5-sonnet-20241022")
 
