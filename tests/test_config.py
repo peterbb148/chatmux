@@ -47,7 +47,7 @@ class TestConfig:
 
             # Check defaults
             assert config.openai_api_key is None
-            assert config.openai_model_1 == "gpt-4"
+            assert config.openai_model_1 == "gpt-4o"
             assert config.openai_model_2 == "gpt-3.5-turbo"
             assert config.debug is False
             assert config.log_level == "INFO"
@@ -150,7 +150,7 @@ class TestConfig:
             # OpenAI model 1
             openai_config = config.get_model_config("openai", "1")
             assert openai_config["api_key"] == "test-openai-key"
-            assert openai_config["model_name"] == "gpt-4"
+            assert openai_config["model_name"] == "gpt-4o"
             assert openai_config["temperature"] == 0.8
             assert openai_config["max_tokens"] == 3000
             assert openai_config["timeout"] == 60

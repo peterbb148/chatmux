@@ -202,16 +202,16 @@ class TestOpenAIClient:
             assert response_text == "Hello!"
             assert token_usage is None
 
-    def test_estimate_cost_gpt4(self, config):
-        """Test cost estimation for GPT-4."""
-        config.model_name = "gpt-4"
+    def test_estimate_cost_gpt4o(self, config):
+        """Test cost estimation for GPT-4o."""
+        config.model_name = "gpt-4o"
         client = OpenAIClient(config)
 
         # 1000 prompt tokens, 500 completion tokens
         cost = client._estimate_cost(1000, 500)
 
-        # GPT-4: $30/1M prompt, $60/1M completion
-        expected = (1000 / 1_000_000 * 30) + (500 / 1_000_000 * 60)
+        # GPT-4o: $5/1M prompt, $15/1M completion
+        expected = (1000 / 1_000_000 * 5) + (500 / 1_000_000 * 15)
         assert cost == pytest.approx(expected)
 
     def test_estimate_cost_gpt35(self, config):

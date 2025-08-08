@@ -142,6 +142,8 @@ class OpenAIClient(ModelClient):
         pricing = {
             "gpt-4": {"prompt": 30.0, "completion": 60.0},
             "gpt-4-32k": {"prompt": 60.0, "completion": 120.0},
+            # gpt-4o is the new default GPT-4 class model
+            "gpt-4o": {"prompt": 5.0, "completion": 15.0},
             "gpt-3.5-turbo": {"prompt": 0.5, "completion": 1.5},
             "gpt-3.5-turbo-16k": {"prompt": 3.0, "completion": 4.0},
         }

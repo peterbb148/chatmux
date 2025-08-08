@@ -35,7 +35,7 @@ class TestChatmuxApp:
         # Check first pane is OpenAI
         first_pane = panes[0]
         assert first_pane.provider == ModelProvider.OPENAI
-        assert first_pane.model_name in ["gpt-4", "gpt-3.5-turbo"]
+        assert first_pane.model_name in ["gpt-4o", "gpt-3.5-turbo"]
 
     @pytest.mark.asyncio
     async def test_handle_input(self):
@@ -65,12 +65,12 @@ class TestChatmuxApp:
 
         # Mock coordinator
         with patch.object(app.coordinator, "send_to_models") as mock_send:
-            await app._handle_input("Hello GPT-4", ["gpt-4"])
+            await app._handle_input("Hello GPT-4o", ["gpt-4o"])
 
-            # Check that only GPT-4 pane was targeted
+            # Check that only GPT-4o pane was targeted
             args = mock_send.call_args[0]
             target_panes = args[1]
-            assert all("gpt-4" in p.model_name.lower() for p in target_panes)
+            assert all("gpt-4o" in p.model_name.lower() for p in target_panes)
 
     def test_signal_handler(self):
         """Test signal handler sets running to False."""

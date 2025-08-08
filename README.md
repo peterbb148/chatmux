@@ -112,7 +112,7 @@ Create a `.env` file with your API keys:
 ```env
 # OpenAI
 OPENAI_API_KEY=your-openai-api-key
-OPENAI_MODEL=gpt-4
+OPENAI_MODEL_1=gpt-4o
 
 # Anthropic
 ANTHROPIC_API_KEY=your-anthropic-api-key
