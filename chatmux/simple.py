@@ -327,7 +327,11 @@ class ChatmuxTextualApp(App):
 
     async def action_copy_focused(self) -> None:
         """Copy the content of the focused pane to clipboard."""
-        import pyperclip
+        try:
+            import pyperclip
+        except ImportError:
+            self.notify("pyperclip is not installed", severity="error")
+            return
 
         # Find which model pane has focus
         focused = self.focused
