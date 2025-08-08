@@ -25,6 +25,10 @@ def config():
 def messages():
     """Create test messages."""
     return [
+        Message(
+            role=MessageRole.SYSTEM,
+            content="You are a helpful assistant.",
+        ),
         Message(role=MessageRole.USER, content="Hello"),
         Message(role=MessageRole.ASSISTANT, content="Hi there!"),
         Message(role=MessageRole.USER, content="How are you?"),
@@ -55,10 +59,14 @@ class TestOpenAIClient:
         client = OpenAIClient(config)
         converted = client._convert_messages(messages)
 
-        assert len(converted) == 3
-        assert converted[0] == {"role": "user", "content": "Hello"}
-        assert converted[1] == {"role": "assistant", "content": "Hi there!"}
-        assert converted[2] == {"role": "user", "content": "How are you?"}
+        assert len(converted) == 4
+        assert converted[0] == {
+            "role": "system",
+            "content": "You are a helpful assistant.",
+        }
+        assert converted[1] == {"role": "user", "content": "Hello"}
+        assert converted[2] == {"role": "assistant", "content": "Hi there!"}
+        assert converted[3] == {"role": "user", "content": "How are you?"}
 
     @pytest.mark.asyncio
     async def test_stream_response(self, config, messages):
@@ -93,6 +101,10 @@ class TestOpenAIClient:
             mock_create.assert_called_once_with(
                 model="gpt-3.5-turbo",
                 messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a helpful assistant.",
+                    },
                     {"role": "user", "content": "Hello"},
                     {"role": "assistant", "content": "Hi there!"},
                     {"role": "user", "content": "How are you?"},
