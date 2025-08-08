@@ -1,6 +1,7 @@
 """Response coordinator for managing multiple model responses."""
 
 import asyncio
+import random
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -260,7 +261,7 @@ class ResponseCoordinator:
         if retry_count < config.retry_attempts:
             task.retry_count = retry_count + 1  # type: ignore
             backoff = config.retry_delay * (2**retry_count)
-            jitter = backoff * 0.1 * (0.5 - asyncio.create_task(asyncio.sleep(0)).done())
+            jitter = backoff * 0.1 * random.uniform(-0.5, 0.5)
             await asyncio.sleep(backoff + jitter)
 
             # Retry
