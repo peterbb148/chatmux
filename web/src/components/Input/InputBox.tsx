@@ -81,7 +81,10 @@ const InputBox = forwardRef<InputBoxRef>((_, ref) => {
 
     // Dispatch custom event for ChatWindow components to capture the original message
     window.dispatchEvent(new CustomEvent('userMessageSent', {
-      detail: { content: message }
+      detail: {
+        content: message,
+        targets: targetModels
+      }
     }))
 
     // Send cleaned message (without @mentions) via WebSocket

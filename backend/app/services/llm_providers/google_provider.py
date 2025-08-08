@@ -1,6 +1,7 @@
 import logging
 import os
 from collections.abc import AsyncGenerator
+from typing import Any
 
 import google.generativeai as genai
 from dotenv import load_dotenv
@@ -28,7 +29,9 @@ class GoogleProvider(BaseLLMProvider):
         else:
             logger.warning("GOOGLE_API_KEY not found - Google provider will return mock responses")
 
-    async def stream_completion(self, prompt: str) -> AsyncGenerator[str, None]:
+    async def stream_completion(
+        self, prompt: str, messages: list[dict[str, Any]] = None
+    ) -> AsyncGenerator[str, None]:
         if not self.model:
             # Return mock response if no API key
             response = (
@@ -43,9 +46,20 @@ class GoogleProvider(BaseLLMProvider):
         try:
             logger.info(f"Starting Google stream for model: {self.model_name}")
 
+            # Format conversation for Google (they use a different format)
+            if messages:
+                # Convert messages to Google's format
+                formatted_prompt = ""
+                for msg in messages:
+                    role = "User" if msg["role"] == "user" else "Assistant"
+                    formatted_prompt += f"{role}: {msg['content']}\n\n"
+                formatted_prompt += f"User: {prompt}\nAssistant:"
+            else:
+                formatted_prompt = prompt
+
             # Google's SDK doesn't have native async streaming, so we use sync streaming
             response = self.model.generate_content(
-                prompt,
+                formatted_prompt,
                 generation_config=genai.GenerationConfig(
                     max_output_tokens=2000,
                     temperature=0.7,
@@ -63,7 +77,7 @@ class GoogleProvider(BaseLLMProvider):
             logger.error(f"Error in Google stream_completion: {e}")
             yield f"Error: {str(e)}"
 
-    async def get_completion(self, prompt: str) -> str:
+    async def get_completion(self, prompt: str, messages: list[dict[str, Any]] = None) -> str:
         try:
             response = self.model.generate_content(
                 prompt,

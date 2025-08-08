@@ -30,16 +30,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ id, modelName }) => {
   const streamingMessage = getMessageForModel(id)
   const isStreaming = streamingMessage && !streamingMessage.isComplete
 
-  // Debug logging
-  useEffect(() => {
-    if (streamingMessage) {
-      console.log(`ChatWindow ${id} streaming:`, {
-        content: streamingMessage.content,
-        isComplete: streamingMessage.isComplete,
-        error: streamingMessage.error
-      })
-    }
-  }, [streamingMessage, id])
 
   // Auto-scroll to bottom when new messages arrive
   const scrollToBottom = () => {
@@ -93,32 +83,35 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ id, modelName }) => {
 
   // Add user message immediately when sent
   useEffect(() => {
-    const handleUserMessage = (event: CustomEvent<{ content: string }>) => {
-      // Add user message to all chat windows immediately
-      setMessages(prev => [...prev, {
-        role: 'user',
-        content: event.detail.content,
-        timestamp: new Date()
-      }])
+    const handleUserMessage = (event: CustomEvent<{ content: string; targets?: string[] }>) => {
+
+      // Only add message if this window is targeted (or no specific targets)
+      const isTargeted = !event.detail.targets ||
+                        event.detail.targets.length === 0 ||
+                        event.detail.targets.includes(id)
+
+      if (isTargeted) {
+        setMessages(prev => {
+          const newMessages = [...prev, {
+            role: 'user',
+            content: event.detail.content,
+            timestamp: new Date()
+          }]
+          return newMessages
+        })
+      } else {
+      }
     }
 
     window.addEventListener('userMessageSent' as any, handleUserMessage as any)
     return () => {
       window.removeEventListener('userMessageSent' as any, handleUserMessage as any)
     }
-  }, [])
+  }, [id, messages.length])
 
   // Add completed streaming message to messages array
   useEffect(() => {
-    console.log(`ChatWindow ${id} - checking completion:`, {
-      hasStreamingMessage: !!streamingMessage,
-      isComplete: streamingMessage?.isComplete,
-      hasContent: !!streamingMessage?.content,
-      contentLength: streamingMessage?.content?.length
-    })
-
     if (streamingMessage && streamingMessage.isComplete && streamingMessage.content) {
-      console.log(`ChatWindow ${id} - adding completed message to array`)
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: streamingMessage.content,

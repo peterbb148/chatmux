@@ -34,6 +34,9 @@ class LLMCoordinator:
         self.providers = {}
         self.model_info = {}
 
+        # Store conversation history per user per model
+        self.conversations = {}  # {user_id: {model_id: [messages]}}
+
         provider_map = {
             "openai": (OpenAIProvider, "OpenAI"),
             "anthropic": (AnthropicProvider, "Anthropic"),
@@ -100,6 +103,12 @@ class LLMCoordinator:
             provider = self.providers[model_id]
             model_info = self.model_info[model_id]
 
+            # Initialize conversation history if needed
+            if message.user_id not in self.conversations:
+                self.conversations[message.user_id] = {}
+            if model_id not in self.conversations[message.user_id]:
+                self.conversations[message.user_id][model_id] = []
+
             # Check if websocket is still connected before sending
             if websocket.client_state.value != 1:  # 1 = CONNECTED
                 logger.warning(f"WebSocket disconnected before streaming model {model_id}")
@@ -122,10 +131,17 @@ class LLMCoordinator:
                 logger.warning(f"Failed to send stream_start for model {model_id}")
                 return
 
-            # Stream responses from the provider
-            logger.info(f"Starting to stream from {model_info['name']} (model_id: {model_id})")
+            # Get conversation history for this user and model
+            conversation_history = self.conversations[message.user_id][model_id].copy()
+
+            # Stream responses from the provider with conversation history
+            logger.info(
+                f"Starting to stream from {model_info['name']} (model_id: {model_id}) "
+                f"with {len(conversation_history)} history messages"
+            )
             chunk_count = 0
-            async for chunk in provider.stream_completion(message.content):
+            full_response = ""
+            async for chunk in provider.stream_completion(message.content, conversation_history):
                 chunk_count += 1
                 logger.debug(
                     f"Received chunk {chunk_count} from {model_info['name']}: {chunk[:50]}..."
@@ -153,7 +169,24 @@ class LLMCoordinator:
                     logger.warning(f"Failed to send chunk for model {model_id}")
                     break
 
+                # Accumulate the response
+                full_response += chunk
+
             logger.info(f"Finished streaming from {model_info['name']}, sent {chunk_count} chunks")
+
+            # Store the conversation in history
+            self.conversations[message.user_id][model_id].append(
+                {"role": "user", "content": message.content}
+            )
+            self.conversations[message.user_id][model_id].append(
+                {"role": "assistant", "content": full_response}
+            )
+
+            # Limit conversation history to last 20 messages (10 exchanges)
+            if len(self.conversations[message.user_id][model_id]) > 20:
+                self.conversations[message.user_id][model_id] = self.conversations[message.user_id][
+                    model_id
+                ][-20:]
 
             # Send completion signal
             if websocket.client_state.value == 1:
