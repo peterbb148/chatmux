@@ -61,13 +61,17 @@ const InputBox = forwardRef<InputBoxRef>((_, ref) => {
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (showCommandPalette) {
-      // Let CommandPalette handle keyboard events
+      // Let CommandPalette handle keyboard events when it's open
       if (e.key === 'Escape') {
         e.preventDefault()
         setShowCommandPalette(false)
         setMessage('')
+        return
       }
-      return
+      // Don't handle Enter here when palette is open - let CommandPalette handle it
+      if (e.key === 'Enter' || e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'Tab') {
+        return
+      }
     }
 
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -137,11 +141,8 @@ const InputBox = forwardRef<InputBoxRef>((_, ref) => {
     setMessage(text)
 
     // Show command palette when user types '/'
-    if (text === '/' || (text.startsWith('/') && !text.includes(' '))) {
+    if (text.startsWith('/')) {
       setShowCommandPalette(true)
-    } else if (text.startsWith('/') && text.includes(' ')) {
-      // Hide palette after selecting a command
-      setShowCommandPalette(false)
     } else {
       setShowCommandPalette(false)
     }
