@@ -185,21 +185,55 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
     const args = parts.slice(1).join(' ')
 
     // Check if we should show model suggestions
-    if (commandName === 'new' && searchTerm.includes(' ')) {
-      setShowModelSuggestions(true)
-      const modelSearch = args.toLowerCase()
+    if (commandName === 'new') {
+      if (searchTerm === 'new' || searchTerm.includes(' ')) {
+        // Show model suggestions for "/new" or "/new ..."
+        setShowModelSuggestions(true)
+        const modelSearch = args.toLowerCase()
 
-      if (modelSearch) {
-        const filtered = availableModels.filter(model =>
-          model.name.toLowerCase().includes(modelSearch) ||
-          model.provider.toLowerCase().includes(modelSearch)
-        )
-        setModelSuggestions(filtered)
+        if (modelSearch) {
+          // Smart filtering: match from start of model name or after hyphens
+          const filtered = availableModels.filter(model => {
+            const modelLower = model.name.toLowerCase()
+            const providerLower = model.provider.toLowerCase()
+
+            // Check if search matches:
+            // 1. Start of model name
+            // 2. After a hyphen in model name
+            // 3. Provider name
+            // 4. Any substring (fallback)
+            const parts = modelLower.split('-')
+            const matchesStart = modelLower.startsWith(modelSearch)
+            const matchesAfterHyphen = parts.some(part => part.startsWith(modelSearch))
+            const matchesProvider = providerLower.includes(modelSearch)
+            const matchesAnywhere = modelLower.includes(modelSearch)
+
+            return matchesStart || matchesAfterHyphen || matchesProvider || matchesAnywhere
+          })
+
+          // Sort by relevance: exact start matches first, then partial matches
+          filtered.sort((a, b) => {
+            const aStarts = a.name.toLowerCase().startsWith(modelSearch)
+            const bStarts = b.name.toLowerCase().startsWith(modelSearch)
+            if (aStarts && !bStarts) return -1
+            if (!aStarts && bStarts) return 1
+            return 0
+          })
+
+          setModelSuggestions(filtered)
+        } else {
+          // Show all available models when just "/new " is typed
+          setModelSuggestions(availableModels)
+        }
+        setFilteredCommands([])
       } else {
-        // Show all available models when just "/new " is typed
-        setModelSuggestions(availableModels)
+        // Still typing "/ne" - show the new command
+        setShowModelSuggestions(false)
+        const filtered = commands.filter(cmd =>
+          cmd.name.toLowerCase().startsWith(commandName)
+        )
+        setFilteredCommands(filtered)
       }
-      setFilteredCommands([])
     } else {
       setShowModelSuggestions(false)
       if (commandName) {
@@ -212,6 +246,16 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
       }
     }
   }, [commandText, isOpen, availableModels])
+
+  // Auto-scroll to selected item
+  useEffect(() => {
+    if (paletteRef.current && selectedIndex >= 0) {
+      const selectedElement = paletteRef.current.querySelectorAll('[data-item-index]')[selectedIndex] as HTMLElement
+      if (selectedElement) {
+        selectedElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      }
+    }
+  }, [selectedIndex])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -269,10 +313,11 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
         border: '1px solid #e0e0e0',
         borderRadius: '8px',
         boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-        maxHeight: '400px',
-        overflowY: 'scroll',
+        maxHeight: '320px',
+        overflowY: 'auto',
         overflowX: 'hidden',
-        zIndex: 1000
+        zIndex: 1000,
+        WebkitOverflowScrolling: 'touch'
       }}
     >
       {showModelSuggestions ? (
@@ -296,6 +341,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
             {modelSuggestions.map((model, index) => (
               <div
                 key={model.name}
+                data-item-index={index}
                 style={{
                   padding: '10px 16px',
                   backgroundColor: index === selectedIndex ? '#f0f0f0' : 'transparent',
@@ -349,6 +395,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
           filteredCommands.map((cmd, index) => (
             <div
               key={cmd.name}
+              data-item-index={index}
               style={{
                 padding: '12px 16px',
                 backgroundColor: index === selectedIndex ? '#f0f0f0' : 'transparent',
