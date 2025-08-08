@@ -4,24 +4,19 @@ import asyncio
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
 from uuid import UUID, uuid4
 
 from .config import config
-from .core.models import Message, MessageRole, ModelConfig, ModelProvider, TokenUsage
+from .core.models import (
+    Message,
+    MessageRole,
+    ModelConfig,
+    ModelProvider,
+    PaneStatus,
+    TokenUsage,
+)
 from .models import ModelClient, RateLimitError
 from .models.openai_client import OpenAIClient
-
-
-class PaneStatus(Enum):
-    """Status of a model pane."""
-
-    IDLE = "idle"
-    STREAMING = "streaming"
-    ERROR = "error"
-    COMPLETE = "complete"
-    RATE_LIMITED = "rate_limited"
-    CANCELLED = "cancelled"
 
 
 @dataclass

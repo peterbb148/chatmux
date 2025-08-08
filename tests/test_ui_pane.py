@@ -2,7 +2,8 @@
 
 from rich.panel import Panel
 
-from chatmux.ui.pane import ModelPane, PaneStatus
+from chatmux.ui.pane import ModelPane
+from chatmux.core.models import PaneStatus
 
 
 class TestModelPane:

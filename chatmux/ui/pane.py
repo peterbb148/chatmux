@@ -1,6 +1,5 @@
 """Model pane component for displaying AI model responses."""
 
-from enum import Enum
 from uuid import uuid4
 
 from rich.console import RenderableType
@@ -8,19 +7,7 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.style import Style
 
-from ..core.models import ModelProvider
-
-
-class PaneStatus(Enum):
-    """Status of a model pane."""
-
-    IDLE = "idle"
-    STREAMING = "streaming"
-    ERROR = "error"
-    DISABLED = "disabled"
-    COMPLETE = "complete"
-    RATE_LIMITED = "rate_limited"
-    CANCELLED = "cancelled"
+from ..core.models import ModelProvider, PaneStatus
 
 
 class ModelPane:
