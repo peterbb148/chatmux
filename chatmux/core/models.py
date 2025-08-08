@@ -15,6 +15,9 @@ class PaneStatus(str, Enum):
     STREAMING = "streaming"
     ERROR = "error"
     DISABLED = "disabled"
+    COMPLETE = "complete"
+    RATE_LIMITED = "rate_limited"
+    CANCELLED = "cancelled"
 
 
 class MessageRole(str, Enum):

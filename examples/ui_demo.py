@@ -7,7 +7,8 @@ from pathlib import Path
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from chatmux.ui import GridLayout, PaneStatus
+from chatmux.ui import GridLayout
+from chatmux.core.models import PaneStatus
 
 
 def main():

@@ -6,9 +6,9 @@ from unittest.mock import Mock, patch
 import pytest
 
 from chatmux.coordinator import ResponseCoordinator
-from chatmux.core.models import ModelProvider
+from chatmux.core.models import ModelProvider, PaneStatus
 from chatmux.models import ModelClient, RateLimitError
-from chatmux.ui.pane import ModelPane, PaneStatus
+from chatmux.ui.pane import ModelPane
 
 
 @pytest.fixture
