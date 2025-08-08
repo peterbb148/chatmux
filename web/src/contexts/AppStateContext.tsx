@@ -52,19 +52,35 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
       })
   }, [])
 
-  const addWindow = useCallback((modelName: string, provider: string = 'Custom') => {
+  const addWindow = useCallback((modelName: string, provider?: string) => {
+    // Auto-detect provider based on model name if not provided
+    let detectedProvider = provider || 'Custom'
+    if (!provider) {
+      const modelLower = modelName.toLowerCase()
+      if (modelLower.includes('gpt') || modelLower.includes('davinci') || modelLower.includes('turbo')) {
+        detectedProvider = 'OpenAI'
+      } else if (modelLower.includes('claude') || modelLower.includes('opus') || modelLower.includes('sonnet') || modelLower.includes('haiku')) {
+        detectedProvider = 'Anthropic'
+      } else if (modelLower.includes('gemini') || modelLower.includes('bison') || modelLower.includes('palm')) {
+        detectedProvider = 'Google'
+      } else if (modelLower.includes('mistral') || modelLower.includes('mixtral') || modelLower.includes('magistral') || modelLower.includes('devstral') || modelLower.includes('codestral') || modelLower.includes('pixtral') || modelLower.includes('ministral')) {
+        detectedProvider = 'Mistral'
+      }
+    }
+
     const newWindow: ChatWindowModel = {
       id: nextWindowId,
       name: modelName,
-      provider
+      provider: detectedProvider
     }
     setWindows(prev => [...prev, newWindow])
     setNextWindowId(prev => prev + 1)
 
-    // Auto-adjust grid columns if needed
+    // Auto-adjust grid columns to match window count
     const newWindowCount = windows.length + 1
-    if (newWindowCount > gridCols * 2) {
-      setGridCols(Math.min(6, gridCols + 1))
+    // Increase columns when adding more windows
+    if (newWindowCount > gridCols) {
+      setGridCols(Math.min(8, newWindowCount))  // Support up to 8 columns
     }
   }, [nextWindowId, windows.length, gridCols])
 
