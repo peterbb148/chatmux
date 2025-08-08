@@ -1,8 +1,8 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { useWebSocketContext } from '../../contexts/WebSocketContext'
-import { useAppState } from '../../contexts/AppStateContext'
 import { useKeyboardShortcutsContext } from '../../contexts/KeyboardShortcutsContext'
+import { useAppState } from '../../contexts/AppStateContext'
 
 interface ChatWindowProps {
   id: number
@@ -16,75 +16,51 @@ interface Message {
   timestamp: Date
 }
 
-const ChatWindow: React.FC<ChatWindowProps> = ({ id, modelName }) => {
-  const [messages, setMessages] = React.useState<Message[]>([])
-  const [isCopied, setIsCopied] = React.useState(false)
+const ChatWindow: React.FC<ChatWindowProps> = React.memo(({ id, modelName }) => {
+  const [messages, setMessages] = useState<Message[]>([])
+  const [isCopied, setIsCopied] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const windowRef = useRef<HTMLDivElement>(null)
-  const { getMessageForModel, clearMessageForModel } = useWebSocketContext()
-  const { focusedWindowId, registerClearHandler, unregisterClearHandler } = useAppState()
   const { registerShortcut } = useKeyboardShortcutsContext()
+  const { streamingMessages } = useWebSocketContext()
+  const { focusedWindowId, setFocusedWindowId, clearChat } = useAppState()
 
   const isFocused = focusedWindowId === id
-
-  const streamingMessage = getMessageForModel(id)
+  const streamingMessage = streamingMessages[id]
   const isStreaming = streamingMessage && !streamingMessage.isComplete
 
-
   // Auto-scroll to bottom when new messages arrive
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
-
   useEffect(() => {
-    scrollToBottom()
-  }, [messages, streamingMessage])
-
-  // Register clear handler
-  useEffect(() => {
-    const clearMessages = () => {
-      setMessages([])
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' })
     }
+  }, [messages.length, streamingMessage?.content])
 
-    registerClearHandler(id, clearMessages)
-    return () => unregisterClearHandler(id)
-  }, [id, registerClearHandler, unregisterClearHandler])
-
-  // Register copy shortcut when focused
+  // Register keyboard shortcuts for this window
   useEffect(() => {
-    if (!isFocused) return
-
     const unsubscribe = registerShortcut({
       key: 'c',
       ctrl: true,
       cmd: true,
-      description: 'Copy focused window content',
+      description: `Copy messages from window ${id}`,
       handler: () => {
-        const allContent = messages.map(m =>
-          `${m.role === 'user' ? 'You' : modelName}: ${m.content}`
-        ).join('\n\n')
-
-        const currentStreaming = streamingMessage?.content || ''
-        const fullContent = currentStreaming
-          ? allContent + (allContent ? '\n\n' : '') + `${modelName}: ${currentStreaming}`
-          : allContent
-
-        if (fullContent) {
-          navigator.clipboard.writeText(fullContent).then(() => {
-            setIsCopied(true)
-            setTimeout(() => setIsCopied(false), 2000)
-          })
+        if (isFocused && messages.length > 0) {
+          const text = messages
+            .map(m => `${m.role === 'user' ? 'You' : modelName}: ${m.content}`)
+            .join('\n\n')
+          navigator.clipboard.writeText(text)
+          setIsCopied(true)
+          setTimeout(() => setIsCopied(false), 2000)
         }
       }
     })
 
     return unsubscribe
-  }, [isFocused, registerShortcut, messages, modelName, streamingMessage])
+  }, [isFocused, registerShortcut, messages, modelName, id])
 
   // Add user message immediately when sent
   useEffect(() => {
     const handleUserMessage = (event: CustomEvent<{ content: string; targets?: string[] }>) => {
-
       // Only add message if this window is targeted (or no specific targets)
       const isTargeted = !event.detail.targets ||
                         event.detail.targets.length === 0 ||
@@ -99,7 +75,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ id, modelName }) => {
           }]
           return newMessages
         })
-      } else {
       }
     }
 
@@ -107,7 +82,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ id, modelName }) => {
     return () => {
       window.removeEventListener('userMessageSent' as any, handleUserMessage as any)
     }
-  }, [id, messages.length])
+  }, [id])
 
   // Add completed streaming message to messages array
   useEffect(() => {
@@ -117,111 +92,165 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ id, modelName }) => {
         content: streamingMessage.content,
         timestamp: new Date()
       }])
-      // Clear the streaming message after adding it to messages
-      clearMessageForModel(id)
+
+      // Clear this streaming message from the context
+      const event = new CustomEvent('clearStreamingMessage', { detail: { modelId: id } })
+      window.dispatchEvent(event)
     }
-  }, [streamingMessage?.isComplete, streamingMessage?.content, id, clearMessageForModel])
+  }, [streamingMessage?.isComplete, streamingMessage?.content, id])
+
+  // Handle clear chat events
+  useEffect(() => {
+    const handleClearChat = () => {
+      if (focusedWindowId === id || focusedWindowId === null) {
+        setMessages([])
+      }
+    }
+
+    const unsubscribe = clearChat.subscribe(handleClearChat)
+    return unsubscribe
+  }, [clearChat, focusedWindowId, id])
 
   return (
     <div
       ref={windowRef}
-      className={`bg-gray-900 rounded-lg border flex flex-col h-full transition-all overflow-hidden ${
-        isFocused ? 'border-blue-500 shadow-xl shadow-blue-500/30 ring-1 ring-blue-400/20' : 'border-gray-700'
-      }`}
-      onClick={() => {
-        // Optional: click to focus
+      className="bg-white rounded-2xl flex flex-col h-full overflow-hidden shadow-sm border border-gray-200"
+      onClick={() => setFocusedWindowId(id)}
+      style={{
+        boxShadow: isFocused ? '0 0 0 2px #007AFF' : '0 1px 3px rgba(0,0,0,0.1)'
       }}
     >
-      {/* Header - TMux Style */}
-      <div className={`px-3 py-1.5 border-b flex justify-between items-center flex-shrink-0 font-mono text-sm ${
-        isFocused ? 'bg-gradient-to-r from-blue-900/40 to-blue-800/30 border-blue-500/50' : 'bg-gray-800/50 border-gray-700'
-      }`}>
-        <h3 className="flex items-center gap-1">
-          <span className="text-gray-500">┌─[</span>
-          <span className={`font-bold px-1 ${
-            isFocused ? 'text-blue-400' : 'text-gray-400'
-          }`}>{id}</span>
-          <span className="text-gray-500">]─</span>
-          <span className={`font-medium ${
-            isFocused ? 'text-white' : 'text-gray-300'
-          }`}>{modelName}</span>
-          <span className="text-gray-500">─────</span>
-        </h3>
+      {/* Header */}
+      <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          <span
+            className="text-xs font-semibold px-2 py-1 rounded-full"
+            style={{
+              backgroundColor: isFocused ? '#007AFF' : '#E5E5EA',
+              color: isFocused ? '#FFFFFF' : '#8E8E93'
+            }}
+          >
+            {id}
+          </span>
+          <span className="text-sm font-medium text-gray-800">{modelName}</span>
+        </div>
         <div className="flex items-center gap-2">
           {isCopied && (
-            <span className="text-base text-green-400">Copied!</span>
+            <span className="text-xs text-green-600">Copied!</span>
           )}
           {isStreaming && (
-            <span className="text-base text-blue-400 animate-pulse">Thinking...</span>
+            <span className="text-xs text-gray-500">Typing...</span>
           )}
         </div>
       </div>
 
-      {/* Messages area - Scrollable */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 min-h-0 bg-gradient-to-b from-gray-900 to-gray-900/95">
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-4" style={{ backgroundColor: '#FFFFFF' }}>
         {messages.length === 0 && !streamingMessage ? (
-          <p className="text-gray-500 text-base text-center mt-4">
-            Waiting for messages...
-          </p>
+          <div className="text-center text-gray-400 text-sm mt-8">
+            No messages yet
+          </div>
         ) : (
-          <>
-            {messages.map((message, index) => (
-              <div
-                key={index}
-                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} mb-3 animate-fadeIn`}
-              >
-                <div className={`relative max-w-[70%] group`}>
-                  <div
-                    className={`px-4 py-2.5 ${
-                      message.role === 'user'
-                        ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-2xl rounded-br-sm shadow-lg ml-auto'
-                        : 'bg-gray-800 text-gray-100 rounded-2xl rounded-bl-sm border border-gray-700/50 shadow-md'
-                    } transition-all duration-200 hover:shadow-xl`}
-                  >
-                    <div className="text-sm leading-relaxed prose-chat-bubble">
-                      <ReactMarkdown>{message.content}</ReactMarkdown>
+          <div className="space-y-3">
+            {messages.map((message, index) => {
+              const isLastUserMessage = message.role === 'user' &&
+                (index === messages.length - 1 || messages[index + 1]?.role !== 'user')
+
+              return (
+                <div
+                  key={`${index}-${message.timestamp.getTime()}`}
+                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div className="max-w-[70%]">
+                    <div
+                      className="px-4 py-2 rounded-2xl text-sm break-words"
+                      style={{
+                        backgroundColor: message.role === 'user' ? '#007AFF' : '#E5E5EA',
+                        color: message.role === 'user' ? '#FFFFFF' : '#000000',
+                        borderBottomRightRadius: message.role === 'user' && isLastUserMessage ? '4px' : '16px',
+                        borderBottomLeftRadius: message.role === 'assistant' && index === messages.length - 1 ? '4px' : '16px',
+                        wordBreak: 'break-word',
+                        overflowWrap: 'break-word'
+                      }}
+                    >
+                      <ReactMarkdown
+                        components={{
+                          p: ({children}) => <p style={{margin: 0}}>{children}</p>,
+                          code: ({children}) => (
+                            <code style={{
+                              backgroundColor: 'rgba(0,0,0,0.1)',
+                              padding: '2px 4px',
+                              borderRadius: '4px',
+                              fontSize: '0.9em'
+                            }}>{children}</code>
+                          )
+                        }}
+                      >
+                        {message.content}
+                      </ReactMarkdown>
                     </div>
-                  </div>
-                  <div className={`text-xs mt-1 opacity-60 ${
-                    message.role === 'user' ? 'text-right pr-1 text-gray-400' : 'pl-1 text-gray-500'
-                  }`}>
-                    {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {isLastUserMessage && (
+                      <div className="text-xs text-gray-500 mt-1 text-right pr-1">
+                        Delivered
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
 
             {/* Streaming message */}
             {streamingMessage && (
-              <div className="flex justify-start mb-3 animate-fadeIn">
-                <div className="relative max-w-[70%]">
-                  <div className="px-4 py-2.5 bg-gray-800 text-gray-100 rounded-2xl rounded-bl-sm border border-gray-700/50 shadow-md">
-                    <div className="text-sm leading-relaxed prose-chat-bubble">
-                      {streamingMessage.error ? (
-                        <span className="text-red-400">Error: {streamingMessage.error}</span>
-                      ) : (
-                        <>
-                          <ReactMarkdown>{streamingMessage.content}</ReactMarkdown>
-                          {isStreaming && (
-                            <span className="inline-flex ml-1">
-                              <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce mr-0.5" style={{animationDelay: '0ms'}}></span>
-                              <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce mr-0.5" style={{animationDelay: '150ms'}}></span>
-                              <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></span>
-                            </span>
-                          )}
-                        </>
-                      )}
-                    </div>
+              <div className="flex justify-start">
+                <div className="max-w-[70%]">
+                  <div
+                    className="px-4 py-2 rounded-2xl text-sm break-words"
+                    style={{
+                      backgroundColor: '#E5E5EA',
+                      color: '#000000',
+                      borderBottomLeftRadius: '4px',
+                      wordBreak: 'break-word',
+                      overflowWrap: 'break-word'
+                    }}
+                  >
+                    {streamingMessage.error ? (
+                      <span style={{ color: '#FF3B30' }}>Error: {streamingMessage.error}</span>
+                    ) : (
+                      <>
+                        <ReactMarkdown
+                          components={{
+                            p: ({children}) => <p style={{margin: 0}}>{children}</p>,
+                            code: ({children}) => (
+                              <code style={{
+                                backgroundColor: 'rgba(0,0,0,0.1)',
+                                padding: '2px 4px',
+                                borderRadius: '4px',
+                                fontSize: '0.9em'
+                              }}>{children}</code>
+                            )
+                          }}
+                        >
+                          {streamingMessage.content || ''}
+                        </ReactMarkdown>
+                        {isStreaming && (
+                          <span className="inline-block ml-1">
+                            <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-pulse mx-0.5"></span>
+                            <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-pulse mx-0.5" style={{animationDelay: '200ms'}}></span>
+                            <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-pulse mx-0.5" style={{animationDelay: '400ms'}}></span>
+                          </span>
+                        )}
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
             )}
-          </>
+          </div>
         )}
         <div ref={messagesEndRef} />
       </div>
     </div>
   )
-}
+})
 
 export default ChatWindow
