@@ -41,8 +41,12 @@ class OpenAIClient(ModelClient):
         for msg in messages:
             if msg.role == MessageRole.USER:
                 openai_messages.append({"role": "user", "content": msg.content})
-            else:
+            elif msg.role == MessageRole.ASSISTANT:
                 openai_messages.append({"role": "assistant", "content": msg.content})
+            elif msg.role == MessageRole.SYSTEM:
+                openai_messages.append({"role": "system", "content": msg.content})
+            else:
+                raise ValueError(f"Unsupported message role: {msg.role}")
         return openai_messages
 
     async def stream_response(  # type: ignore[override]
