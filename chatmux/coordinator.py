@@ -170,7 +170,7 @@ class ResponseCoordinator:
             if self.on_stream_update:
                 self.on_stream_update(
                     StreamUpdate(
-                        pane_id=config.pane_id,
+                        pane_id=model_config.pane_id,
                         content="",
                         is_complete=False,
                     )
