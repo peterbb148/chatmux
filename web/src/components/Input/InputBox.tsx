@@ -2,6 +2,7 @@ import React, { useState, useRef, forwardRef, useImperativeHandle, useEffect } f
 import type { KeyboardEvent } from 'react'
 import { useWebSocketContext } from '../../contexts/WebSocketContext'
 import { useKeyboardShortcutsContext } from '../../contexts/KeyboardShortcutsContext'
+import { useAppState } from '../../contexts/AppStateContext'
 
 export interface InputBoxRef {
   focus: () => void
@@ -10,26 +11,23 @@ export interface InputBoxRef {
 
 const InputBox = forwardRef<InputBoxRef>((_, ref) => {
   const [message, setMessage] = useState('')
-  const [targets, setTargets] = useState<number[]>([])
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const { sendMessage, connected } = useWebSocketContext()
   const { registerShortcut } = useKeyboardShortcutsContext()
+  const { focusedWindowId } = useAppState()
 
-  // Expose methods via ref
   useImperativeHandle(ref, () => ({
     focus: () => {
       textareaRef.current?.focus()
     },
     clear: () => {
       setMessage('')
-      setTargets([])
       if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto'
+        textareaRef.current.style.height = '52px'
       }
     }
   }))
 
-  // Register Cmd+Enter shortcut
   useEffect(() => {
     const unsubscribe = registerShortcut({
       key: 'Enter',
@@ -37,7 +35,6 @@ const InputBox = forwardRef<InputBoxRef>((_, ref) => {
       ctrl: true,
       description: 'Send message',
       handler: () => {
-        // Only handle if textarea is focused
         if (document.activeElement === textareaRef.current) {
           handleSend()
         }
@@ -45,109 +42,103 @@ const InputBox = forwardRef<InputBoxRef>((_, ref) => {
     })
 
     return unsubscribe
-  }, [message]) // Include message in deps so handler has current value
+  }, [message, focusedWindowId])
 
-  // Parse @mentions from the message
-  const parseTargets = (text: string): number[] => {
+  const parseTargets = (text: string): string[] => {
     const mentions = text.match(/@(\d+)/g)
     if (!mentions) return []
 
     return mentions
-      .map(m => parseInt(m.substring(1)))
-      .filter(n => n >= 1 && n <= 4)
+      .map(m => m.substring(1))
+      .filter(n => parseInt(n) >= 1 && parseInt(n) <= 4)
   }
 
-  // Remove @mentions from the message content
   const stripMentions = (text: string): string => {
     return text.replace(/@(\d+)/g, '').replace(/\s+/g, ' ').trim()
   }
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    // Cmd+Enter is handled by the keyboard shortcut, so we only need to prevent default here
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
+      handleSend()
     }
   }
 
   const handleSend = () => {
     if (!message.trim()) return
 
-    const targetModels = parseTargets(message)
+    const mentions = parseTargets(message)
     const cleanedMessage = stripMentions(message)
 
-
-    // Don't send if the cleaned message is empty
     if (!cleanedMessage.trim()) return
 
-    // Dispatch custom event for ChatWindow components to capture the original message
+    const targetIds = mentions.length > 0
+      ? mentions
+      : (focusedWindowId ? [String(focusedWindowId)] : [])
+
     window.dispatchEvent(new CustomEvent('userMessageSent', {
       detail: {
-        content: message,
-        targets: targetModels
+        content: cleanedMessage,
+        targets: targetIds
       }
     }))
 
-    // Send cleaned message (without @mentions) via WebSocket
-    sendMessage(cleanedMessage, targetModels)
-
+    sendMessage(cleanedMessage, targetIds.map(Number))
     setMessage('')
-    setTargets([])
 
-    // Auto-resize textarea back to original height
     if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto'
+      textareaRef.current.style.height = '52px'
     }
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value
     setMessage(text)
-    setTargets(parseTargets(text))
 
-    // Auto-resize textarea
     if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto'
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
+      textareaRef.current.style.height = '52px'
+      const scrollHeight = textareaRef.current.scrollHeight
+      textareaRef.current.style.height = `${Math.min(scrollHeight, 200)}px`
     }
   }
 
   return (
-    <div className="p-4">
-      <div className="relative">
-        {/* Connection status */}
-        {!connected && (
-          <div className="absolute -top-6 left-0 text-sm text-red-500">
-            Disconnected. Reconnecting...
-          </div>
-        )}
-
+    <div style={{
+      backgroundColor: '#fafafa',
+      borderTop: '1px solid #e5e5e5',
+      padding: '16px 24px',
+      borderTopLeftRadius: '16px',
+      borderTopRightRadius: '16px',
+      boxShadow: '0 -2px 10px rgba(0,0,0,0.05)'
+    }}>
+      <div style={{ maxWidth: '800px', margin: '0 auto', position: 'relative' }}>
         <textarea
           ref={textareaRef}
           value={message}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          placeholder="Type a message... (use @1-4 to target specific models)"
-          className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-2xl
-                     text-sm text-gray-900 placeholder:text-gray-400 resize-none
-                     focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                     min-h-[44px] max-h-[120px] transition-all duration-200"
-          rows={1}
+          placeholder="Send a message..."
           disabled={!connected}
+          style={{
+            width: '100%',
+            padding: '12px 16px',
+            backgroundColor: '#ffffff',
+            border: '1px solid #e0e0e0',
+            borderRadius: '24px',
+            color: '#2e2e2e',
+            fontSize: '15px',
+            lineHeight: '1.5',
+            resize: 'none',
+            outline: 'none',
+            minHeight: '48px',
+            maxHeight: '200px',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+            transition: 'border-color 0.2s, box-shadow 0.2s'
+          }}
+          rows={1}
         />
-        <div className="mt-2 flex justify-between items-center text-xs text-gray-500 px-2">
-          <div>
-            {targets.length > 0
-              ? `Sending to: Model${targets.length > 1 ? 's' : ''} ${targets.join(', ')}`
-              : 'Sending to: All models'
-            }
-            <span className="ml-2">
-              (Use @1-4 to target specific models)
-            </span>
-          </div>
-          <div>
-            Press Cmd+Enter to send, Enter for new line
-          </div>
-        </div>
+
       </div>
     </div>
   )

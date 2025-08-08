@@ -64,25 +64,15 @@ const MainLayout: React.FC = () => {
   }, [registerShortcut, setFocusedWindowId, clearAllChats])
 
   return (
-    <div className="h-screen bg-gray-100 p-4">
-      <div className="h-full flex flex-col bg-white rounded-2xl shadow-xl overflow-hidden">
-        {/* Header bar */}
-        <div className="bg-gray-50 border-b border-gray-200 px-6 py-3 flex items-center justify-between">
-          <h1 className="text-lg font-semibold text-gray-800">Chatmux</h1>
-          <div className="text-sm text-gray-500">
-            {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </div>
-        </div>
+    <div className="h-screen w-screen flex flex-col overflow-hidden" style={{ backgroundColor: '#ffffff' }}>
+      {/* Chat windows grid - takes up available space */}
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <ChatGrid />
+      </div>
 
-        {/* Chat windows grid - takes up most space */}
-        <div className="flex-1 overflow-hidden bg-gray-50">
-          <ChatGrid />
-        </div>
-
-        {/* Input area - fixed height at bottom */}
-        <div className="border-t border-gray-200 bg-white">
-          <InputBox ref={inputRef} />
-        </div>
+      {/* Input box at bottom - always visible */}
+      <div className="flex-shrink-0">
+        <InputBox ref={inputRef} />
       </div>
     </div>
   )

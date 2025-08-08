@@ -35,13 +35,13 @@ const ChatGrid: React.FC = () => {
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center">
-        <p className="text-gray-400">Loading models...</p>
+        <p className="text-white">Loading models...</p>
       </div>
     )
   }
 
   return (
-    <div className="h-full grid grid-cols-4 gap-3 p-3 bg-gray-50">
+    <div className="h-full grid grid-cols-4 overflow-hidden">
       {models.map((model) => (
         <ChatWindow
           key={model.id}

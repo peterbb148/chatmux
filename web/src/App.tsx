@@ -4,17 +4,20 @@ import { WebSocketProvider } from './contexts/WebSocketContext'
 import { KeyboardShortcutsProvider } from './contexts/KeyboardShortcutsContext'
 import { AppStateProvider } from './contexts/AppStateContext'
 import KeyboardShortcutsHelp from './components/UI/KeyboardShortcutsHelp'
+import ErrorBoundary from './components/ErrorBoundary'
 
 function App() {
   return (
-    <WebSocketProvider>
-      <AppStateProvider>
-        <KeyboardShortcutsProvider>
-          <MainLayout />
-          <KeyboardShortcutsHelp />
-        </KeyboardShortcutsProvider>
-      </AppStateProvider>
-    </WebSocketProvider>
+    <ErrorBoundary>
+      <WebSocketProvider>
+        <AppStateProvider>
+          <KeyboardShortcutsProvider>
+            <MainLayout />
+            <KeyboardShortcutsHelp />
+          </KeyboardShortcutsProvider>
+        </AppStateProvider>
+      </WebSocketProvider>
+    </ErrorBoundary>
   )
 }
 

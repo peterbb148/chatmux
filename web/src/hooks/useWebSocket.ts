@@ -13,7 +13,7 @@ let isConnected = false
 
 export const useWebSocket = () => {
   const [connected, setConnected] = useState(false)
-  const [streamingMessages, setStreamingMessages] = useState<Map<number, StreamingMessage>>(new Map())
+  const [streamingMessages, setStreamingMessages] = useState<{ [key: number]: StreamingMessage }>({})
 
   useEffect(() => {
     // Only connect if we haven't already
@@ -34,31 +34,32 @@ export const useWebSocket = () => {
       switch (message.type) {
         case 'stream_start':
           if (modelId) {
-            setStreamingMessages(prev => {
-              const newMap = new Map(prev)
-              newMap.set(modelId, {
+            setStreamingMessages(prev => ({
+              ...prev,
+              [modelId]: {
                 modelId: modelId,
                 content: '',
                 isComplete: false
-              })
-              return newMap
-            })
+              }
+            }))
           }
           break
 
         case 'stream_chunk':
           if (message.data) {
             setStreamingMessages(prev => {
-              const newMap = new Map(prev)
-              const existing = newMap.get(message.data!.model_id)
+              const existing = prev[message.data!.model_id]
               if (existing) {
-                newMap.set(message.data!.model_id, {
-                  ...existing,
-                  content: existing.content + message.data!.content,
-                  isComplete: false
-                })
+                return {
+                  ...prev,
+                  [message.data!.model_id]: {
+                    ...existing,
+                    content: existing.content + message.data!.content,
+                    isComplete: false
+                  }
+                }
               }
-              return newMap
+              return prev
             })
           }
           break
@@ -66,31 +67,32 @@ export const useWebSocket = () => {
         case 'stream_end':
           if (modelId) {
             setStreamingMessages(prev => {
-              const newMap = new Map(prev)
-              const existing = newMap.get(modelId)
+              const existing = prev[modelId]
               if (existing) {
-                newMap.set(modelId, {
-                  ...existing,
-                  isComplete: true
-                })
+                return {
+                  ...prev,
+                  [modelId]: {
+                    ...existing,
+                    isComplete: true
+                  }
+                }
               }
-              return newMap
+              return prev
             })
           }
           break
 
         case 'error':
           if (modelId) {
-            setStreamingMessages(prev => {
-              const newMap = new Map(prev)
-              newMap.set(modelId, {
+            setStreamingMessages(prev => ({
+              ...prev,
+              [modelId]: {
                 modelId: modelId,
                 content: '',
                 isComplete: true,
                 error: message.error
-              })
-              return newMap
-            })
+              }
+            }))
           }
           break
       }
@@ -99,37 +101,35 @@ export const useWebSocket = () => {
     // Set up connection handler
     const unsubscribeConnection = websocketService.onConnectionChange(setConnected)
 
+    // Handle clear streaming message events
+    const handleClearStreamingMessage = (event: CustomEvent<{ modelId: number }>) => {
+      setStreamingMessages(prev => {
+        const newMessages = { ...prev }
+        delete newMessages[event.detail.modelId]
+        return newMessages
+      })
+    }
+
+    window.addEventListener('clearStreamingMessage' as any, handleClearStreamingMessage as any)
+
     // Cleanup - but don't disconnect the singleton WebSocket
     return () => {
       unsubscribeMessage()
       unsubscribeConnection()
+      window.removeEventListener('clearStreamingMessage' as any, handleClearStreamingMessage as any)
       // Don't disconnect here - let the singleton manage its own lifecycle
     }
   }, [])
 
   const sendMessage = useCallback((content: string, targets: number[] = []) => {
     // Clear previous messages when sending new one
-    setStreamingMessages(new Map())
+    setStreamingMessages({})
     websocketService.sendMessage(content, targets)
-  }, [])
-
-  const getMessageForModel = useCallback((modelId: number): StreamingMessage | null => {
-    return streamingMessages.get(modelId) || null
-  }, [streamingMessages])
-
-  const clearMessageForModel = useCallback((modelId: number) => {
-    setStreamingMessages(prev => {
-      const newMap = new Map(prev)
-      newMap.delete(modelId)
-      return newMap
-    })
   }, [])
 
   return {
     connected,
     sendMessage,
-    getMessageForModel,
-    clearMessageForModel,
     streamingMessages
   }
 }
