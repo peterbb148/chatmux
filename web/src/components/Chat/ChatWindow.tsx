@@ -125,22 +125,27 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ id, modelName }) => {
   return (
     <div
       ref={windowRef}
-      className={`bg-gray-800 rounded-lg border-2 flex flex-col h-full transition-all overflow-hidden ${
-        isFocused ? 'border-blue-500 shadow-lg shadow-blue-500/20' : 'border-gray-700'
+      className={`bg-gray-900 rounded-lg border flex flex-col h-full transition-all overflow-hidden ${
+        isFocused ? 'border-blue-500 shadow-xl shadow-blue-500/30 ring-1 ring-blue-400/20' : 'border-gray-700'
       }`}
       onClick={() => {
         // Optional: click to focus
       }}
     >
-      {/* Header - Fixed */}
-      <div className={`px-3 py-2 rounded-t-lg border-b flex justify-between items-center flex-shrink-0 ${
-        isFocused ? 'bg-blue-900/30 border-blue-600' : 'bg-gray-700 border-gray-600'
+      {/* Header - TMux Style */}
+      <div className={`px-3 py-1.5 border-b flex justify-between items-center flex-shrink-0 font-mono text-sm ${
+        isFocused ? 'bg-gradient-to-r from-blue-900/40 to-blue-800/30 border-blue-500/50' : 'bg-gray-800/50 border-gray-700'
       }`}>
-        <h3 className="text-base font-semibold flex items-center gap-2">
-          <span className={`px-2 py-0.5 rounded ${
-            isFocused ? 'bg-blue-600' : 'bg-gray-600'
-          }`}>{id}:</span>
-          {modelName}
+        <h3 className="flex items-center gap-1">
+          <span className="text-gray-500">┌─[</span>
+          <span className={`font-bold px-1 ${
+            isFocused ? 'text-blue-400' : 'text-gray-400'
+          }`}>{id}</span>
+          <span className="text-gray-500">]─</span>
+          <span className={`font-medium ${
+            isFocused ? 'text-white' : 'text-gray-300'
+          }`}>{modelName}</span>
+          <span className="text-gray-500">─────</span>
         </h3>
         <div className="flex items-center gap-2">
           {isCopied && (
@@ -153,7 +158,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ id, modelName }) => {
       </div>
 
       {/* Messages area - Scrollable */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
+      <div className="flex-1 overflow-y-auto px-4 py-3 min-h-0 bg-gradient-to-b from-gray-900 to-gray-900/95">
         {messages.length === 0 && !streamingMessage ? (
           <p className="text-gray-500 text-base text-center mt-4">
             Waiting for messages...
@@ -163,20 +168,24 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ id, modelName }) => {
             {messages.map((message, index) => (
               <div
                 key={index}
-                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} mb-3`}
+                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} mb-3 animate-fadeIn`}
               >
-                <div
-                  className={`max-w-[80%] ${
-                    message.role === 'user'
-                      ? 'bg-blue-900/30'
-                      : 'bg-gray-700/50'
-                  } rounded-lg p-3`}
-                >
-                  <div className="text-base mb-1" style={{ color: 'black', fontWeight: 'bold' }}>
-                    {message.role === 'user' ? 'You' : modelName}
+                <div className={`relative max-w-[70%] group`}>
+                  <div
+                    className={`px-4 py-2.5 ${
+                      message.role === 'user'
+                        ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-2xl rounded-br-sm shadow-lg ml-auto'
+                        : 'bg-gray-800 text-gray-100 rounded-2xl rounded-bl-sm border border-gray-700/50 shadow-md'
+                    } transition-all duration-200 hover:shadow-xl`}
+                  >
+                    <div className="text-sm leading-relaxed prose-chat-bubble">
+                      <ReactMarkdown>{message.content}</ReactMarkdown>
+                    </div>
                   </div>
-                  <div className="text-base prose-chat">
-                    <ReactMarkdown>{message.content}</ReactMarkdown>
+                  <div className={`text-xs mt-1 opacity-60 ${
+                    message.role === 'user' ? 'text-right pr-1 text-gray-400' : 'pl-1 text-gray-500'
+                  }`}>
+                    {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </div>
                 </div>
               </div>
@@ -184,21 +193,26 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ id, modelName }) => {
 
             {/* Streaming message */}
             {streamingMessage && (
-              <div className="flex justify-start mb-3">
-                <div className="max-w-[80%] bg-gray-700/50 rounded-lg p-3">
-                <div className="text-base mb-1" style={{ color: 'black', fontWeight: 'bold' }}>
-                  {modelName}
-                </div>
-                <div className="text-base prose-chat">
-                  {streamingMessage.error ? (
-                    <span className="text-red-400">Error: {streamingMessage.error}</span>
-                  ) : (
-                    <>
-                      <ReactMarkdown>{streamingMessage.content}</ReactMarkdown>
-                      {isStreaming && <span className="animate-pulse">▊</span>}
-                    </>
-                  )}
-                </div>
+              <div className="flex justify-start mb-3 animate-fadeIn">
+                <div className="relative max-w-[70%]">
+                  <div className="px-4 py-2.5 bg-gray-800 text-gray-100 rounded-2xl rounded-bl-sm border border-gray-700/50 shadow-md">
+                    <div className="text-sm leading-relaxed prose-chat-bubble">
+                      {streamingMessage.error ? (
+                        <span className="text-red-400">Error: {streamingMessage.error}</span>
+                      ) : (
+                        <>
+                          <ReactMarkdown>{streamingMessage.content}</ReactMarkdown>
+                          {isStreaming && (
+                            <span className="inline-flex ml-1">
+                              <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce mr-0.5" style={{animationDelay: '0ms'}}></span>
+                              <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce mr-0.5" style={{animationDelay: '150ms'}}></span>
+                              <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></span>
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

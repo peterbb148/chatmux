@@ -41,7 +41,7 @@ const ChatGrid: React.FC = () => {
   }
 
   return (
-    <div className="h-full grid grid-cols-4 gap-4 p-4">
+    <div className="h-full grid grid-cols-4 gap-2 p-2">
       {models.map((model) => (
         <ChatWindow
           key={model.id}

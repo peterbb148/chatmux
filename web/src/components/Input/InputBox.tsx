@@ -112,29 +112,32 @@ const InputBox = forwardRef<InputBoxRef>((_, ref) => {
   }
 
   return (
-    <div className="py-4 bg-gray-800 rounded-b-xl">
-      <div className="max-w-full mx-auto px-4">
+    <div className="py-3 px-3">
+      <div className="relative">
         {/* Connection status */}
         {!connected && (
-          <div className="text-base text-red-400 mb-2">
-            Disconnected from server. Reconnecting...
+          <div className="absolute -top-8 left-0 text-sm text-red-400 font-mono">
+            ⚠ Disconnected. Reconnecting...
           </div>
         )}
 
-        <textarea
-          ref={textareaRef}
-          value={message}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          placeholder="Enter prompt here"
-          className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg
-                     text-base text-gray-100 placeholder:text-base placeholder:text-gray-400 resize-none
-                     focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                     min-h-[40px] max-h-[200px]"
-          rows={1}
-          disabled={!connected}
-        />
-        <div className="mt-3 flex justify-between items-center text-base text-gray-500">
+        <div className="flex items-center gap-2">
+          <span className="text-green-400 font-mono text-sm">❯</span>
+          <textarea
+            ref={textareaRef}
+            value={message}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            placeholder="Enter your message... (@1-4 to target specific models)"
+            className="flex-1 px-3 py-2 bg-gray-800/50 border border-gray-700 rounded-md
+                       text-sm text-gray-100 placeholder:text-sm placeholder:text-gray-500 resize-none
+                       focus:outline-none focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/50
+                       font-mono min-h-[36px] max-h-[120px] transition-all duration-200"
+            rows={1}
+            disabled={!connected}
+          />
+        </div>
+        <div className="mt-2 flex justify-between items-center text-xs text-gray-600 font-mono px-4">
           <div>
             {targets.length > 0
               ? `Sending to: Model${targets.length > 1 ? 's' : ''} ${targets.join(', ')}`

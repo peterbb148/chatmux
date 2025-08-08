@@ -64,15 +64,30 @@ const MainLayout: React.FC = () => {
   }, [registerShortcut, setFocusedWindowId, clearAllChats])
 
   return (
-    <div className="h-screen bg-gray-950 p-6">
-      <div className="h-full flex flex-col bg-gray-900 text-gray-100 rounded-lg shadow-xl border border-gray-800">
+    <div className="h-screen bg-black p-3">
+      <div className="h-full flex flex-col bg-gray-950 text-gray-100 rounded-md shadow-2xl border border-gray-800 overflow-hidden">
+        {/* Terminal-style header bar */}
+        <div className="bg-gray-900 border-b border-gray-700 px-3 py-1 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="flex gap-1.5">
+              <div className="w-3 h-3 rounded-full bg-red-500"></div>
+              <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+              <div className="w-3 h-3 rounded-full bg-green-500"></div>
+            </div>
+            <span className="text-xs font-mono text-gray-500 ml-2">chatmux</span>
+          </div>
+          <div className="text-xs font-mono text-gray-500">
+            {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </div>
+        </div>
+
         {/* Chat windows grid - takes up most space */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden bg-gradient-to-b from-gray-950 to-gray-900">
           <ChatGrid />
         </div>
 
         {/* Input area - fixed height at bottom */}
-        <div className="border-t border-gray-700">
+        <div className="border-t-2 border-gray-800 bg-gray-900/50">
           <InputBox ref={inputRef} />
         </div>
       </div>
