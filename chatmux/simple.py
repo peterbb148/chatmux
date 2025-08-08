@@ -12,6 +12,11 @@ from textual.containers import Grid, Vertical
 from textual.widgets import Footer, Header, Static, TextArea
 
 try:
+    import pyperclip
+except ImportError:
+    pyperclip = None
+
+try:
     from .config import config
     from .coordinator import ResponseCoordinator, StreamUpdate
     from .core.models import Message, MessageRole, ModelConfig, ModelProvider
@@ -327,7 +332,9 @@ class ChatmuxTextualApp(App):
 
     async def action_copy_focused(self) -> None:
         """Copy the content of the focused pane to clipboard."""
-        import pyperclip
+        if pyperclip is None:
+            self.notify("pyperclip is not installed", severity="error")
+            return
 
         # Find which model pane has focus
         focused = self.focused
