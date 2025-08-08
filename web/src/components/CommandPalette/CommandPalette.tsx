@@ -103,30 +103,64 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
 
   // Fetch available models
   useEffect(() => {
-    // Common model suggestions
+    // Comprehensive model suggestions based on 2024-2025 availability
     const commonModels: ModelSuggestion[] = [
-      // OpenAI models
-      { name: 'gpt-5', provider: 'OpenAI', inUse: false },
+      // OpenAI models (2025)
+      { name: 'gpt-4.1', provider: 'OpenAI', inUse: false },
+      { name: 'gpt-4.1-mini', provider: 'OpenAI', inUse: false },
+      { name: 'gpt-4.1-nano', provider: 'OpenAI', inUse: false },
       { name: 'gpt-4o', provider: 'OpenAI', inUse: false },
       { name: 'gpt-4o-mini', provider: 'OpenAI', inUse: false },
+      { name: 'gpt-4o-audio', provider: 'OpenAI', inUse: false },
       { name: 'gpt-4-turbo', provider: 'OpenAI', inUse: false },
+      { name: 'gpt-4-turbo-preview', provider: 'OpenAI', inUse: false },
       { name: 'gpt-3.5-turbo', provider: 'OpenAI', inUse: false },
-      // Anthropic models
+      { name: 'gpt-3.5-turbo-16k', provider: 'OpenAI', inUse: false },
+
+      // Anthropic Claude models (2025)
+      { name: 'claude-opus-4-1-20250805', provider: 'Anthropic', inUse: false },
+      { name: 'claude-sonnet-4-20250805', provider: 'Anthropic', inUse: false },
+      { name: 'claude-3-7-sonnet-20250224', provider: 'Anthropic', inUse: false },
       { name: 'claude-3-5-sonnet-20241022', provider: 'Anthropic', inUse: false },
       { name: 'claude-3-5-haiku-20241022', provider: 'Anthropic', inUse: false },
+      { name: 'claude-3-5-opus', provider: 'Anthropic', inUse: false },
       { name: 'claude-3-opus-20240229', provider: 'Anthropic', inUse: false },
       { name: 'claude-3-sonnet-20240229', provider: 'Anthropic', inUse: false },
       { name: 'claude-3-haiku-20240307', provider: 'Anthropic', inUse: false },
-      // Google models
+
+      // Google Gemini models (2025)
+      { name: 'gemini-2.5-pro', provider: 'Google', inUse: false },
+      { name: 'gemini-2.5-flash', provider: 'Google', inUse: false },
+      { name: 'gemini-2.5-flash-lite', provider: 'Google', inUse: false },
+      { name: 'gemini-2.0-flash', provider: 'Google', inUse: false },
+      { name: 'gemini-2.0-flash-thinking', provider: 'Google', inUse: false },
+      { name: 'gemini-2.0-pro', provider: 'Google', inUse: false },
       { name: 'gemini-1.5-pro', provider: 'Google', inUse: false },
       { name: 'gemini-1.5-pro-latest', provider: 'Google', inUse: false },
       { name: 'gemini-1.5-flash', provider: 'Google', inUse: false },
+      { name: 'gemini-1.5-flash-8b', provider: 'Google', inUse: false },
       { name: 'gemini-1.0-pro', provider: 'Google', inUse: false },
-      // Mistral models
+
+      // Mistral AI models (2025)
+      { name: 'mistral-large-2411', provider: 'Mistral', inUse: false },
       { name: 'mistral-large-latest', provider: 'Mistral', inUse: false },
+      { name: 'mistral-medium-3', provider: 'Mistral', inUse: false },
       { name: 'mistral-medium-latest', provider: 'Mistral', inUse: false },
+      { name: 'mistral-small-2506', provider: 'Mistral', inUse: false },
+      { name: 'mistral-small-2503', provider: 'Mistral', inUse: false },
       { name: 'mistral-small-latest', provider: 'Mistral', inUse: false },
+      { name: 'magistral-medium-2507', provider: 'Mistral', inUse: false },
+      { name: 'magistral-small-2507', provider: 'Mistral', inUse: false },
+      { name: 'devstral-medium-2507', provider: 'Mistral', inUse: false },
+      { name: 'devstral-small-2507', provider: 'Mistral', inUse: false },
+      { name: 'codestral-latest', provider: 'Mistral', inUse: false },
+      { name: 'codestral-mamba', provider: 'Mistral', inUse: false },
+      { name: 'pixtral-large', provider: 'Mistral', inUse: false },
+      { name: 'ministral-3b', provider: 'Mistral', inUse: false },
+      { name: 'ministral-8b', provider: 'Mistral', inUse: false },
+      { name: 'mistral-nemo', provider: 'Mistral', inUse: false },
       { name: 'mixtral-8x7b-instruct', provider: 'Mistral', inUse: false },
+      { name: 'mixtral-8x22b', provider: 'Mistral', inUse: false },
     ]
 
     // Mark models that are already in use
@@ -236,7 +270,8 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
         borderRadius: '8px',
         boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
         maxHeight: '400px',
-        overflowY: 'auto',
+        overflowY: 'scroll',
+        overflowX: 'hidden',
         zIndex: 1000
       }}
     >
