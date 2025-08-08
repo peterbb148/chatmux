@@ -3,6 +3,7 @@ import type { KeyboardEvent } from 'react'
 import { useWebSocketContext } from '../../contexts/WebSocketContext'
 import { useKeyboardShortcutsContext } from '../../contexts/KeyboardShortcutsContext'
 import { useAppState } from '../../contexts/AppStateContext'
+import CommandPalette from '../CommandPalette/CommandPalette'
 
 export interface InputBoxRef {
   focus: () => void
@@ -11,10 +12,11 @@ export interface InputBoxRef {
 
 const InputBox = forwardRef<InputBoxRef>((_, ref) => {
   const [message, setMessage] = useState('')
+  const [showCommandPalette, setShowCommandPalette] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const { sendMessage, connected } = useWebSocketContext()
   const { registerShortcut } = useKeyboardShortcutsContext()
-  const { focusedWindowId } = useAppState()
+  const { focusedWindowId, addWindow } = useAppState()
 
   useImperativeHandle(ref, () => ({
     focus: () => {
@@ -58,10 +60,49 @@ const InputBox = forwardRef<InputBoxRef>((_, ref) => {
   }
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (showCommandPalette) {
+      // Let CommandPalette handle keyboard events
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        setShowCommandPalette(false)
+        setMessage('')
+      }
+      return
+    }
+
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
-      handleSend()
+
+      // Check if it's a command
+      if (message.startsWith('/')) {
+        executeCommand(message)
+      } else {
+        handleSend()
+      }
     }
+  }
+
+  const executeCommand = (commandText: string) => {
+    const parts = commandText.slice(1).split(' ')
+    const command = parts[0]
+    const args = parts.slice(1)
+
+    switch (command) {
+      case 'new':
+        if (args.length > 0) {
+          addWindow(args.join(' '))
+        }
+        break
+      case 'clear':
+        if (args[0] === 'all') {
+          window.dispatchEvent(new Event('clearAllChats'))
+        }
+        break
+      // Add more commands as needed
+    }
+
+    setMessage('')
+    setShowCommandPalette(false)
   }
 
   const handleSend = () => {
@@ -95,11 +136,27 @@ const InputBox = forwardRef<InputBoxRef>((_, ref) => {
     const text = e.target.value
     setMessage(text)
 
+    // Show command palette when user types '/'
+    if (text === '/' || (text.startsWith('/') && !text.includes(' '))) {
+      setShowCommandPalette(true)
+    } else if (text.startsWith('/') && text.includes(' ')) {
+      // Hide palette after selecting a command
+      setShowCommandPalette(false)
+    } else {
+      setShowCommandPalette(false)
+    }
+
     if (textareaRef.current) {
       textareaRef.current.style.height = '52px'
       const scrollHeight = textareaRef.current.scrollHeight
       textareaRef.current.style.height = `${Math.min(scrollHeight, 200)}px`
     }
+  }
+
+  const handleCommandSelect = (command: string) => {
+    setMessage(command)
+    setShowCommandPalette(false)
+    textareaRef.current?.focus()
   }
 
   return (
@@ -112,6 +169,12 @@ const InputBox = forwardRef<InputBoxRef>((_, ref) => {
       boxShadow: '0 -2px 10px rgba(0,0,0,0.05)'
     }}>
       <div style={{ maxWidth: '800px', margin: '0 auto', position: 'relative' }}>
+        <CommandPalette
+          isOpen={showCommandPalette}
+          onClose={() => setShowCommandPalette(false)}
+          commandText={message}
+          onCommandSelect={handleCommandSelect}
+        />
         <textarea
           ref={textareaRef}
           value={message}
