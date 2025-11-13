@@ -64,17 +64,15 @@ const MainLayout: React.FC = () => {
   }, [registerShortcut, setFocusedWindowId, clearAllChats])
 
   return (
-    <div className="h-screen bg-gray-950 p-6">
-      <div className="h-full flex flex-col bg-gray-900 text-gray-100 rounded-lg shadow-xl border border-gray-800">
-        {/* Chat windows grid - takes up most space */}
-        <div className="flex-1 overflow-hidden">
-          <ChatGrid />
-        </div>
+    <div className="h-screen w-screen flex flex-col overflow-hidden" style={{ backgroundColor: '#ffffff' }}>
+      {/* Chat windows grid - takes up available space */}
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <ChatGrid />
+      </div>
 
-        {/* Input area - fixed height at bottom */}
-        <div className="border-t border-gray-700">
-          <InputBox ref={inputRef} />
-        </div>
+      {/* Input box at bottom - always visible */}
+      <div className="flex-shrink-0">
+        <InputBox ref={inputRef} />
       </div>
     </div>
   )

@@ -1,0 +1,20 @@
+# This file defines code owners for the repository
+# Code owners are automatically requested for review when someone opens a pull request
+
+# Default owner for everything in the repo
+* @peterbb148
+
+# Backend code
+/backend/ @peterbb148
+
+# Frontend code
+/web/ @peterbb148
+
+# Documentation
+*.md @peterbb148
+
+# Configuration files
+*.toml @peterbb148
+*.json @peterbb148
+*.yaml @peterbb148
+*.yml @peterbb148

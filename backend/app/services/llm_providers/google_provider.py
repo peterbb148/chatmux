@@ -17,9 +17,9 @@ logger = logging.getLogger(__name__)
 class GoogleProvider(BaseLLMProvider):
     """Google Gemini provider with streaming support"""
 
-    def __init__(self):
+    def __init__(self, model_name: str = "gemini-1.5-pro"):
+        super().__init__(model_name)
         self.api_key = os.getenv("GOOGLE_API_KEY")
-        self.model_name = os.getenv("GOOGLE_MODEL_3", "gemini-1.5-pro")
         self.model = None
 
         if self.api_key:

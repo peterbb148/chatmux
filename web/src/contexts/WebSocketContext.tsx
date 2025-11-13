@@ -12,8 +12,7 @@ interface StreamingMessage {
 interface WebSocketContextType {
   connected: boolean
   sendMessage: (content: string, targets?: number[]) => void
-  getMessageForModel: (modelId: number) => StreamingMessage | null
-  clearMessageForModel: (modelId: number) => void
+  streamingMessages: { [key: number]: StreamingMessage | undefined }
 }
 
 const WebSocketContext = createContext<WebSocketContextType | null>(null)

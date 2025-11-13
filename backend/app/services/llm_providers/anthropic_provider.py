@@ -17,13 +17,14 @@ logger = logging.getLogger(__name__)
 class AnthropicProvider(BaseLLMProvider):
     """Anthropic Claude provider with streaming support"""
 
-    def __init__(self):
+    def __init__(self, model_name: str = "claude-3-5-sonnet-20241022"):
+        super().__init__(model_name)
         self.api_key = os.getenv("ANTHROPIC_API_KEY")
         self.client = None
 
         if self.api_key:
             self.client = AsyncAnthropic(api_key=self.api_key)
-            logger.info("Initialized Anthropic provider")
+            logger.info(f"Initialized Anthropic provider with model: {self.model_name}")
         else:
             logger.warning(
                 "ANTHROPIC_API_KEY not found - Anthropic provider will return mock responses"
@@ -32,13 +33,11 @@ class AnthropicProvider(BaseLLMProvider):
     async def stream_completion(
         self, prompt: str, messages: list[dict[str, Any]] = None
     ) -> AsyncGenerator[str, None]:
-        model_name = os.getenv("ANTHROPIC_MODEL_2", "claude-3-5-sonnet-20241022")
-
         if not self.client:
             # Return mock response if no API key
             response = (
                 f"[Mock Anthropic Response] This is a simulated response "
-                f"from {model_name} to: {prompt}"
+                f"from {self.model_name} to: {prompt}"
             )
             words = response.split()
             for word in words:
@@ -46,7 +45,7 @@ class AnthropicProvider(BaseLLMProvider):
             return
 
         try:
-            logger.info(f"Starting Anthropic stream for model: {model_name}")
+            logger.info(f"Starting Anthropic stream for model: {self.model_name}")
 
             # Format messages for Anthropic API
             if messages:
@@ -56,7 +55,7 @@ class AnthropicProvider(BaseLLMProvider):
                 conversation = [{"role": "user", "content": prompt}]
 
             async with self.client.messages.stream(
-                model=model_name,
+                model=self.model_name,
                 messages=conversation,
                 max_tokens=2000,
                 temperature=0.7,
@@ -72,10 +71,8 @@ class AnthropicProvider(BaseLLMProvider):
 
     async def get_completion(self, prompt: str, messages: list[dict[str, Any]] = None) -> str:
         try:
-            model_name = os.getenv("ANTHROPIC_MODEL_2", "claude-3-5-sonnet-20241022")
-
             message = await self.client.messages.create(
-                model=model_name,
+                model=self.model_name,
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=2000,
                 temperature=0.7,

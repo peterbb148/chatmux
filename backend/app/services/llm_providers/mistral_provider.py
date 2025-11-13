@@ -17,9 +17,9 @@ logger = logging.getLogger(__name__)
 class MistralProvider(BaseLLMProvider):
     """Mistral AI provider with streaming support"""
 
-    def __init__(self):
+    def __init__(self, model_name: str = "mistral-large-latest"):
+        super().__init__(model_name)
         self.api_key = os.getenv("MISTRAL_API_KEY")
-        self.model_name = os.getenv("MISTRAL_MODEL_4", "mistral-large-latest")
         self.client = None
 
         if self.api_key:
