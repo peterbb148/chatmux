@@ -16,7 +16,7 @@ const InputBox = forwardRef<InputBoxRef>((_, ref) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const { sendMessage, connected } = useWebSocketContext()
   const { registerShortcut } = useKeyboardShortcutsContext()
-  const { focusedWindowId, addWindow } = useAppState()
+  const { focusedWindowId, addWindow, removeWindow, setGridCols, windows } = useAppState()
 
   useImperativeHandle(ref, () => ({
     focus: () => {
@@ -97,12 +97,37 @@ const InputBox = forwardRef<InputBoxRef>((_, ref) => {
           addWindow(args.join(' '))
         }
         break
+      case 'close':
+        if (args.length > 0) {
+          const windowId = parseInt(args[0])
+          if (!isNaN(windowId)) {
+            removeWindow(windowId)
+          }
+        }
+        break
       case 'clear':
         if (args[0] === 'all') {
           window.dispatchEvent(new Event('clearAllChats'))
+        } else if (args.length > 0) {
+          const windowId = parseInt(args[0])
+          if (!isNaN(windowId)) {
+            const event = new CustomEvent('clearSpecificChat', { detail: { windowId } })
+            window.dispatchEvent(event)
+          }
         }
         break
-      // Add more commands as needed
+      case 'layout':
+        if (args.length > 0) {
+          const cols = parseInt(args[0])
+          if (!isNaN(cols) && cols >= 1 && cols <= 8) {
+            setGridCols(cols)
+          }
+        }
+        break
+      case 'models':
+        const modelList = windows.map(w => `${w.id}: ${w.name}`).join('\n')
+        alert(`Active windows:\n${modelList}`)
+        break
     }
 
     setMessage('')
@@ -140,9 +165,16 @@ const InputBox = forwardRef<InputBoxRef>((_, ref) => {
     const text = e.target.value
     setMessage(text)
 
-    // Show command palette when user types '/'
+    // Show command palette only when typing an incomplete command
+    // Close it when the user has added arguments (e.g., "/clear 4")
     if (text.startsWith('/')) {
-      setShowCommandPalette(true)
+      const parts = text.slice(1).split(' ')
+      const commandName = parts[0].toLowerCase()
+      const hasArgs = parts.length > 1 && parts[1].trim() !== ''
+
+      // Keep palette open only if typing command name or for "/new " which needs model suggestions
+      const shouldShowPalette = !hasArgs || commandName === 'new'
+      setShowCommandPalette(shouldShowPalette)
     } else {
       setShowCommandPalette(false)
     }
@@ -156,7 +188,19 @@ const InputBox = forwardRef<InputBoxRef>((_, ref) => {
 
   const handleCommandSelect = (command: string) => {
     setMessage(command)
-    setShowCommandPalette(false)
+
+    // If the command is complete (like /new gpt-4o or /models), execute it immediately
+    const isCompleteCommand = command.startsWith('/new ') ||
+                              command === '/models'
+
+    if (isCompleteCommand) {
+      executeCommand(command)
+      setShowCommandPalette(false)
+    } else {
+      // Keep palette closed - let user finish typing the command
+      setShowCommandPalette(false)
+    }
+
     textareaRef.current?.focus()
   }
 

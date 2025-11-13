@@ -278,7 +278,13 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
           if (showModelSuggestions && modelSuggestions[selectedIndex]) {
             onCommandSelect(`/new ${modelSuggestions[selectedIndex].name}`)
           } else if (filteredCommands[selectedIndex]) {
-            onCommandSelect(filteredCommands[selectedIndex].syntax)
+            // For commands that need arguments, just fill in the command name
+            const cmd = filteredCommands[selectedIndex]
+            if (cmd.name === 'models') {
+              onCommandSelect(cmd.syntax) // Execute models immediately
+            } else {
+              onCommandSelect(`/${cmd.name} `) // Fill command name + space for user to add args
+            }
           }
           break
         case 'Tab':
@@ -403,7 +409,13 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
                 borderBottom: index < filteredCommands.length - 1 ? '1px solid #f0f0f0' : 'none'
               }}
               onMouseEnter={() => setSelectedIndex(index)}
-              onClick={() => onCommandSelect(cmd.syntax)}
+              onClick={() => {
+                if (cmd.name === 'models') {
+                  onCommandSelect(cmd.syntax)
+                } else {
+                  onCommandSelect(`/${cmd.name} `)
+                }
+              }}
             >
               <div style={{
                 fontWeight: 500,

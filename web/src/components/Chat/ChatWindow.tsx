@@ -95,6 +95,19 @@ const ChatWindow: React.FC<ChatWindowProps> = React.memo(({ id, modelName }) => 
     return () => unregisterClearHandler(id)
   }, [id, registerClearHandler, unregisterClearHandler])
 
+  useEffect(() => {
+    const handleClearSpecificChat = (event: CustomEvent<{ windowId: number }>) => {
+      if (event.detail.windowId === id) {
+        setMessages([])
+      }
+    }
+
+    window.addEventListener('clearSpecificChat' as any, handleClearSpecificChat as any)
+    return () => {
+      window.removeEventListener('clearSpecificChat' as any, handleClearSpecificChat as any)
+    }
+  }, [id])
+
   return (
     <div
       ref={windowRef}

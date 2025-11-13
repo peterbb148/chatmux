@@ -30,8 +30,30 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [gridCols, setGridCols] = useState(4)
   const [nextWindowId, setNextWindowId] = useState(5)
 
-  // Fetch models from backend on mount
+  // Fetch models from backend on mount and restore from localStorage
   useEffect(() => {
+    // Try to restore windows from localStorage first
+    const savedWindows = localStorage.getItem('chatmux_windows')
+    const savedNextId = localStorage.getItem('chatmux_next_window_id')
+    const savedGridCols = localStorage.getItem('chatmux_grid_cols')
+
+    if (savedWindows) {
+      try {
+        const windows = JSON.parse(savedWindows)
+        setWindows(windows)
+        if (savedNextId) {
+          setNextWindowId(parseInt(savedNextId))
+        }
+        if (savedGridCols) {
+          setGridCols(parseInt(savedGridCols))
+        }
+        return
+      } catch (err) {
+        console.error('Failed to restore windows from localStorage:', err)
+      }
+    }
+
+    // If no saved state, fetch default models from backend
     fetch('http://localhost:8000/models')
       .then(res => res.json())
       .then(data => {
@@ -51,6 +73,15 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
         ])
       })
   }, [])
+
+  // Save windows to localStorage whenever they change
+  useEffect(() => {
+    if (windows.length > 0) {
+      localStorage.setItem('chatmux_windows', JSON.stringify(windows))
+      localStorage.setItem('chatmux_next_window_id', String(nextWindowId))
+      localStorage.setItem('chatmux_grid_cols', String(gridCols))
+    }
+  }, [windows, nextWindowId, gridCols])
 
   const addWindow = useCallback((modelName: string, provider?: string) => {
     // Auto-detect provider based on model name if not provided
@@ -85,13 +116,23 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
   }, [nextWindowId, windows.length, gridCols])
 
   const removeWindow = useCallback((id: number) => {
-    setWindows(prev => prev.filter(w => w.id !== id))
+    setWindows(prev => {
+      const newWindows = prev.filter(w => w.id !== id)
+
+      // Auto-adjust grid columns when removing windows
+      const newWindowCount = newWindows.length
+      if (newWindowCount > 0 && newWindowCount < gridCols) {
+        setGridCols(Math.max(1, newWindowCount))
+      }
+
+      return newWindows
+    })
     if (focusedWindowId === id) {
       setFocusedWindowId(null)
     }
     // Clean up handler
     clearChatHandlers.delete(id)
-  }, [focusedWindowId, clearChatHandlers])
+  }, [focusedWindowId, clearChatHandlers, gridCols])
 
   const registerClearHandler = useCallback((id: number, handler: () => void) => {
     clearChatHandlers.set(id, handler)

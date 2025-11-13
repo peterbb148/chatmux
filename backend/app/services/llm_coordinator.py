@@ -51,7 +51,7 @@ class LLMCoordinator:
 
                 if provider_key in provider_map:
                     provider_class, provider_name = provider_map[provider_key]
-                    self.providers[idx] = provider_class()
+                    self.providers[idx] = provider_class(model_name=model_name)
                     self.model_info[idx] = {"name": model_name, "provider": provider_name}
                     logger.info(f"Loaded model {idx}: {model_name} ({provider_name})")
                 else:
@@ -63,10 +63,10 @@ class LLMCoordinator:
         if not self.providers:
             logger.error("No models loaded, using defaults")
             self.providers = {
-                1: OpenAIProvider(),
-                2: AnthropicProvider(),
-                3: GoogleProvider(),
-                4: MistralProvider(),
+                1: OpenAIProvider(model_name="gpt-4o"),
+                2: AnthropicProvider(model_name="claude-3-5-sonnet"),
+                3: GoogleProvider(model_name="gemini-1.5-pro"),
+                4: MistralProvider(model_name="mistral-large-latest"),
             }
             self.model_info = {
                 1: {"name": "gpt-4o", "provider": "OpenAI"},

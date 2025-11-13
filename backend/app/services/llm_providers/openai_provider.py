@@ -27,7 +27,8 @@ logger = logging.getLogger(__name__)
 class OpenAIProvider(BaseLLMProvider):
     """OpenAI provider with real API integration"""
 
-    def __init__(self):
+    def __init__(self, model_name: str = "gpt-4o"):
+        super().__init__(model_name)
         if not OPENAI_AVAILABLE:
             logger.warning("OpenAI library not installed. Install with: pip install openai")
             return
@@ -38,6 +39,7 @@ class OpenAIProvider(BaseLLMProvider):
             return
 
         self.client = openai.AsyncClient(api_key=api_key)
+        logger.info(f"Initialized OpenAI provider with model: {self.model_name}")
 
     async def stream_completion(
         self, prompt: str, messages: list[dict[str, Any]] = None
@@ -52,9 +54,7 @@ class OpenAIProvider(BaseLLMProvider):
             return
 
         try:
-            # Get the model name from environment
-            model_name = os.getenv("OPENAI_MODEL_1", "gpt-4o")
-
+            # Use the model name from initialization
             # Use provided messages or create new conversation
             if messages:
                 # Append the current prompt as the latest user message
@@ -62,15 +62,23 @@ class OpenAIProvider(BaseLLMProvider):
             else:
                 conversation = [{"role": "user", "content": prompt}]
 
-            stream = await self.client.chat.completions.create(
-                model=model_name,
-                messages=conversation,
-                temperature=0.7,
-                max_tokens=2000,
-                stream=True,
-            )
+            # GPT-5 models don't support max_tokens or temperature parameters
+            if self.model_name and "gpt-5" in self.model_name:
+                stream = await self.client.chat.completions.create(
+                    model=self.model_name,
+                    messages=conversation,
+                    stream=True,
+                )
+            else:
+                stream = await self.client.chat.completions.create(
+                    model=self.model_name,
+                    messages=conversation,
+                    temperature=0.7,
+                    max_tokens=2000,
+                    stream=True,
+                )
 
-            logger.info(f"Starting OpenAI stream for model: {model_name}")
+            logger.info(f"Starting OpenAI stream for model: {self.model_name}")
             async for chunk in stream:
                 if chunk.choices[0].delta.content is not None:
                     content = chunk.choices[0].delta.content
@@ -87,15 +95,21 @@ class OpenAIProvider(BaseLLMProvider):
             return f"[Mock] This is a simulated response from GPT-4 to: {prompt}"
 
         try:
-            model_name = os.getenv("OPENAI_MODEL_1", "gpt-4o")
-
-            response = await self.client.chat.completions.create(
-                model=model_name,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.7,
-                max_tokens=2000,
-                stream=False,
-            )
+            # GPT-5 models don't support max_tokens or temperature parameters
+            if self.model_name and "gpt-5" in self.model_name:
+                response = await self.client.chat.completions.create(
+                    model=self.model_name,
+                    messages=[{"role": "user", "content": prompt}],
+                    stream=False,
+                )
+            else:
+                response = await self.client.chat.completions.create(
+                    model=self.model_name,
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.7,
+                    max_tokens=2000,
+                    stream=False,
+                )
 
             return response.choices[0].message.content or ""
 
