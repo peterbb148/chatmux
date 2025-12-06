@@ -208,7 +208,7 @@ uc-micro-py==1.0.3
     # via linkify-it-py
 uritemplate==4.2.0
     # via google-api-python-client
-urllib3==2.5.0
+urllib3==2.6.0
     # via requests
 yarl==1.20.1
     # via aiohttp
